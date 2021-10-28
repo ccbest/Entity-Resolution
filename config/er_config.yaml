@@ -1,0 +1,46 @@
+###### Description and Structure
+# Configuration file for the definition of entity resolution strategies
+#
+# Structure:
+#
+# strategies (root) (list)
+#   partition: (list)
+#   block: (list)
+#   field_name: (str)
+#   similarity_measure: (str)
+#
+#
+# See the validation document below for a list of strategies and their descriptions
+#######
+
+---
+standardize:
+  - field_name: "state"
+    method: "us_state_to_2code"
+    filters:
+      - field_name: "country"
+        comparator: "equals"
+        value: "US"
+strategies:
+  name_token_similarity:
+    filters:
+      - field_name: "name.type"
+        comparator: "equals"
+        value: "name"
+    partition:
+      - "state"
+      - "country"
+    similarity:
+      - field_name: "name.name"
+        measurement: "tfidf_tokens"
+        comparison: "cosine_similarity"
+    blocking:
+      - method: "alphabetical_neighborhood"
+        field_name: "name.name"
+    scoring: "magnitude"
+    threshold: 0.9
+global_partitions:
+  - "data_source"
+
+...
+
