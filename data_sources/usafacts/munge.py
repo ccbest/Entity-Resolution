@@ -29,7 +29,8 @@ def munge(file: Path) -> List[Entlet]:
             },
             "state": row['State'],
             "country": "US",
-            "covid_cases": {key: val for key, val in row.items() if re.match(r'\d{1,2}/\d{1,2}/\d{4}', key)}
+            "covid_cases": {key: val for key, val in row.items() if re.match(r'\d{1,2}/\d{1,2}/\d{4}', key)},
+            "countyFIPS": row["countyFIPS"]
         })
         entlets.append(entlet)
 

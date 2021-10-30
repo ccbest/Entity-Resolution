@@ -8,8 +8,6 @@ import json
 import socket
 from typing import Any, Callable, Dict, Generator, List, Tuple, Union
 
-from definitions import config
-
 # TODO: Values should have their type stored in the class for checking to avoid collisions
 # TODO: Deduplication of values could be moved to post-munge for efficiency
 
@@ -23,22 +21,16 @@ class Entlet(object):
       - entlet_id
 
     """
+    UID_FIELDS = ['data_source', 'ent_type']
 
-    REQUIRED_FIELDS = ['ent_type', 'entlet_id', 'data_source']
     ER_FIELDS = {}
-    UID_FIELDS = ['ent_type', 'data_source']
 
     CUSTOM_UID_FIELDS = None
     SOURCE_UID_FIELD = None
 
-    STREAMING_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    STREAMING_CONNECTION = None
-    STREAMING_ADDR = None
-
     def __init__(self):
         self.products = ()
         self.values = defaultdict(list)
-        self.defined_uid = None
 
         self.fields = set()
         self.const_values = {}
@@ -49,51 +41,211 @@ class Entlet(object):
         # The RDD can't access the class, so this needs to be copied to the instance
         self.er_fields = self.ER_FIELDS
 
+    @property
+    def required_fields(self) -> List[str]:
+        return [*self.UID_FIELDS, 'entlet_id']
+
+    @property
+    def entlet_id(self):
+        """Retrieves the entlet id. If this is the first time calling this property, will generate
+        the id and save it to the instance's const_values"""
+        return self.const_values.get("entlet_id", self._generate_entlet_id())
+
     def __getitem__(self, key: str):
         """
-        Enables retrieval of values that were stored using the .add() method. Permits dot-delimited
-        key notation.
-
-        Reference ._dot_delimited_lookup for a more detailed explanation.
+        Retrieves a value stored on the entlet. Will search constants first (reserved for
+        required fields).
 
         Args:
-            key (str): The key to look for in dot form, eg. "key1.key2"
+            key (str): The key to retrieve the value for
 
         Returns:
             (Any) The value of the last provided key
         """
-        split_key = key.split('.')
-        if len(split_key) == 1:
-            return self.values.get(split_key[0], self.const_values.get(split_key[0], ValueError))
+        if key in self.const_values:
+            return self.const_values[key]
 
-        else:
-            if split_key[0] in self.values:
-                return [self.get_recursive(obj, split_key[1:]) for obj in self.values[split_key[0]]]
-            elif split_key[0] in self.const_values:
-                return [self.get_recursive(obj, split_key[1:]) for obj in self.const_values[split_key[0]]]
-            else:
-                raise ValueError(f"Key {split_key[0]} does not exist on the entlet.")
+        if key in self.values:
+            return self.values[key]
+
+        raise KeyError(f"Entlet does not contain key {key}")
 
     def __repr__(self):
         """ So we can easily see in the debugger """
         attrs = ', '.join('{}={}'.format(k, v) for k, v in self.const_values.items())
         return f'Entlet({attrs})'
 
-    def __contains__(self, item):
+    def __contains__(self, o):
         """Boolean check if key exists in .values"""
-        _ = self[item]
-        return bool(_)
+        return self.const_values.__contains__(o) or self.values.__contains__(o)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """
+        Provides the same 'get' functionality as exists in a dictionary.
+
+        Args:
+            key (str):
+            default (Any):
+
+        Returns:
+
+        """
+        if key in self:
+            return self[key]
+
+        return default
+
+    @classmethod
+    def define_custom_uid_fields(cls, *args):
+        """
+        Defines a set of fields that will be used to create a custom id. Should be used only if
+        the source of the entlet does not provide its own unique id.
+
+        Before you use this, remember that the entlet ID includes the entity type and the source.
+        If your data source provides some sort of not-very-unique ID like "123", then it should
+        still be good enough to uniquely identify the entlet so long as the ID is unique within the
+        data source itself.
+
+        If you still decide to create custom uids with this method, the custom id will be generated
+        according to the following process:
+            1. stringify all values stored in the specified fields
+            2. sort and deduplicate the values
+            3. join and hash the values
+
+        This will keep the entlet IDs stable between runs if the underlying information doesn't change.
+
+        inb4 "why hashing?" - entlet ids enforce a consistent structure of {source}:{ent_type}:{uid}. Imagine
+        searching for (or having a url route for) a bunch of stringified json. Nightmares.
+
+        Args:
+            *args (str): The fields to use
+
+        Returns:
+            (cls)
+        """
+        cls.CUSTOM_UID_FIELDS = sorted(args)
+        return cls
+
+    @classmethod
+    def define_source_uid_field(cls, field: str):
+        """
+        Defines which field from a given source constitutes a unique id. This is the recommended way of
+        creating the entlet unique ID.
+
+        Keep in mind that declaring a field in this way forces the field to become a single-value constant.
+        For example, if you declare the field "state_iso2" as the source uid field, you may only set the value
+        of field "state_iso2" once.
+
+        Example:
+        Say you have a record from the data source "US_STATES" and you're creating a "state" entity. The
+        record looks like:
+        {
+            "state_iso2": "NY",
+            "population": "a lot"
+        }
+        ...If you pass "state_iso2" to this method, then the resulting entlet id would look like:
+            "US_STATES:state:NY"
+
+        Args:
+            field: The name of the field that represents a source-provided unique ID.
+
+        Returns:
+            (cls)
+        """
+        if cls.CUSTOM_UID_FIELDS:
+            raise ValueError("You cannot declare both custom fields and a source id field")
+
+        cls.SOURCE_UID_FIELD = field
+        return cls
+
+    def define_individual_uid(self, uid: str):
+        """
+        Hard set a particular value to a particular entlet's entlet_id.
+
+        If you use this method it's recommended you take steps to ensure uniqueness across datasets.
+        Keep in mind that entlets with the same ID will be merged NO MATTER WHAT. So if you create
+        entlets from Source A with IDs auto-incremented from 1 and do the same for source B, you're
+        probably going to have a lot of strange resolutions (I'm not going to stop you from wasting
+        your own time).
+
+        Args:
+            uid (str): The unique ID you are passing
+
+        Returns:
+
+        """
+        if 'entlet_id' in self.const_values:
+            raise ValueError("An entlet id has already been declared.")
+
+        self.const_values['entlet_id'] = uid
+        return self
+
+    def _generate_entlet_id(self):
+        """
+        Will create a "unique" entlet id based on supplied settings and store the resulting ID in self.values
+        under "entlet_id"
+
+        Returns:
+            (self)
+        """
+
+        # Preferred method, so considered first
+        if self.SOURCE_UID_FIELD:
+            return self._generate_id_from_source_field()
+
+        # Least preferred method, so considered last
+        if self.CUSTOM_UID_FIELDS:
+            return self._generate_id_from_custom_fields()
+
+        raise ValueError("Unable to generate entlet id. No id generation method has been "
+                         "specified for the entlet, nor has a custom id been provided.")
+
+    def _generate_id_from_source_field(self):
+        """
+        Generates a unique id for the entlet assuming a source uid field has been declared.
+
+        Returns:
+            str
+        """
+        uid_values = [self.values.get(field, None) for field in (*self.UID_FIELDS, self.SOURCE_UID_FIELD)]
+        if not all(uid_values):
+            missing = [field for field in self.UID_FIELDS if not self.const_values[field]]
+            raise ValueError(f"Entlet is missing the following required fields: {missing}")
+
+        uid = ':'.join(uid_values)
+        self.const_values["entlet_id"] = uid
+        return uid
+
+    def _generate_id_from_custom_fields(self):
+        """
+        Generates a unique-ish id from a list of fields. Values from the fields get
+        stringified, sorted, and hashed to produce the id.
+
+        The end result will look something like:
+        "{source}:{ent_type}:4297f44b13955235245b2497399d7a93"
+
+        Returns:
+            (str) the generated id
+        """
+        uid_values = [val for field in self.UID_FIELDS for val in self.get(field, [])]
+        custom_values = [self.values.get(value, None) for value in self.CUSTOM_UID_FIELDS]
+
+        hashed_custom_values = md5(
+            ''.join(sorted([str(val) for val in custom_values])).encode('utf-8')
+        ).hexdigest()
+
+        uid = ":".join([*uid_values, hashed_custom_values])
+        self.const_values["entlet_id"] = uid
+        return uid
 
     def get_recursive(self, obj: Union[Dict, str], key_parts: List[str]):
         """
         Permits dot-delimited key retrieval from loaded values.
-
         The method used to store values is important to understand. Root values in self.values are converted
         to lists containing the values passed. To illustrate, consider the following:
         entlet.add({"test": "value"})
         entlet.add({"test": "value2"})
         entlet.values  ---> { "test": ["value", "value2" ] }
-
         Example:
             If the config were equal to:
             {
@@ -101,13 +253,10 @@ class Entlet(object):
                     "key2": "retrieved_value"
                 }
             }
-
             ...You could retrieve "retrieved_value" by passing key "key1.key2"
-
         Args:
             obj (dict): The dictionary structure to retrieve a value from
             key_parts (list): The key to look for, in order of nesting
-
         Returns:
             (Any) The value of the last provided key
         """
@@ -122,154 +271,12 @@ class Entlet(object):
 
         return self.get_recursive(obj[top_level], key_parts)
 
-    @classmethod
-    def define_custom_uid_fields(cls, *args):
-        """
-        Defines the fields that will be used to create a custom id.
-
-        Before you use this, remember that the entlet ID includes the entity type and the source.
-        If your data source provides some sort of not-very-unique ID like "123", then it should
-        still be good enough to uniquely identify the entlet so long as the ID is unique within the
-        data source itself.
-
-        If you still decide to create custom uids with this method, the custom id will take all values
-        stored in the specified fields, sort and deduplicate them, and then provide a hash of the
-        stringified result. The IDs will only be stable between runs so long as the underlying information
-        hasn't changed.
-
-        Args:
-            *args:
-
-        Returns:
-            (cls)
-        """
-        cls.CUSTOM_UID_FIELDS = sorted(args)
-        cls.REQUIRED_FIELDS += sorted(args)
-        return cls
-
-    @classmethod
-    def define_source_uid_field(cls, field: str):
-        """
-        Defines which field from a given source constitutes a unique id. This is the recommended way of
-        creating the entlet unique ID.
-
-        Once defined, a source_uid_field MUST contain a string as its corresponding value.
-
-        Example:
-        Imagine the field "state_code" (with value "NY") exists on the entlet (with ent_type "state") and is defined
-        here as a unique id field from the source "us_state_codes". The resulting entlet_id would
-        be: state:us_state_codes:NY
-
-        Args:
-            field: The name of the field that represents a source-provided unique ID.
-
-        Returns:
-            (cls)
-        """
-        cls.SOURCE_UID_FIELD = field
-        cls.REQUIRED_FIELDS.append(field)
-        return cls
-
-    def define_individual_uid(self, uid: str):
-        """
-        Defines a value that will be attached to the entlet as its unique id (uid). This value will be used together with
-        the other fields defined by UID_FIELDS to produce the entlet_id.
-
-        Example:
-        Imagine this entlet has ent_type "state" and is from the data source "us_state_codes". You call this method
-        and pass "1" to the source_uid parameter. The resulting entlet_id would be: state:us_state_codes:1
-
-        Args:
-            uid (str): The unique ID you are passing
-
-        Returns:
-
-        """
-        if self.defined_uid and self.defined_uid != uid:
-            raise ValueError("Source UID has already been defined.")
-
-        self.defined_uid = uid
-
-    def _generate_entlet_id(self):
-        """
-        Will create a "unique" entlet id based on supplied settings and store the resulting ID in self.values
-        under "entlet_id"
-
-        Returns:
-            (self)
-        """
-
-        uid_values = [self.values.get(field, None) for field in self.UID_FIELDS]
-        if not all(uid_values):
-            missing = [field for field in self.UID_FIELDS if not self.const_values[field]]
-            raise ValueError(f"Entlet is missing the following required fields: {missing}")
-
-        # Preferred method, so considered first
-        if self.SOURCE_UID_FIELD:
-            entlet_unique_id = self.values.get(self.SOURCE_UID_FIELD, ValueError)
-
-        elif self.defined_uid:
-            entlet_unique_id = [self.defined_uid]
-
-        # Least preferred method, so considered last
-        elif self.CUSTOM_UID_FIELDS:
-            entlet_unique_id = [md5(
-                str(set([self.values.get(value, None) for value in self.CUSTOM_UID_FIELDS]))
-            )]
-
-        else:
-            raise ValueError("Unable to generate Entlet ID - no method specified.")
-
-        uid = ':'.join(uid_values + entlet_unique_id)
-
-        self.const_values["entlet_id"] = uid
-
-        return self
-
-    @classmethod
-    def begin_streaming(cls) -> None:
-        """
-        Opens a connection to Spork Streaming.
-
-        Returns:
-            None
-        """
-        cls.STREAMING_SOCKET.bind(('0.0.0.0', config.get("spark_streaming_port", 9999)))
-        cls.STREAMING_SOCKET.listen(1)
-        cls.STREAMING_CONNECTION, cls.STREAMING_ADDR = cls.STREAMING_SOCKET.accept()
-
-    @classmethod
-    def _complete_source(cls) -> None:
-        """
-        Cleanup for when the data sources completes munging.
-
-        Returns:
-
-        """
-        cls.STREAMING_CONNECTION.close()
-
-    def submit(self) -> True:
-        """
-        Submits the entlet to the Spark Streaming pipeline, which will run the remaining
-        pre-resolve stages.
-
-        Returns:
-            True
-        """
-        if not self.const_values.get("entlet_id", None):
-            self._generate_entlet_id()
-
-        to_be_sent = bytes(json.dumps(self.dump()) + "\n", 'utf-8')
-        self.STREAMING_CONNECTION.sendall(to_be_sent)
-
-        return True
-
     def add(self, obj: dict):
         """
         Add values to this entlet.
 
         Args:
-            obj: keys and values
+            obj (dict)
 
         Returns:
             None
@@ -325,11 +332,15 @@ class Entlet(object):
             raise ValueError(f"Field {_path} expected type {type(a[0])}, received type {type(b)}")
 
         for key in obj:
+            if not key:
+                raise KeyError("Cannot add entlet property which evaluates to None.")
+
             if key == "entlet_id":
                 raise KeyError("You cannot use the .add() method to declare an entlet id.")
 
-            if key in self.REQUIRED_FIELDS:
+            if key in self.required_fields or key == self.SOURCE_UID_FIELD:
                 self._set_const({key: obj[key]})
+                self.values[key] = obj[key]
                 continue
 
             if key not in self.values or not self.values[key]:
@@ -402,7 +413,10 @@ class Entlet(object):
 
             # Must be stringified in order to use
             if not isinstance(value, str):
-                raise ValueError("Field {field} requires values of type string - got {type(value)}.")
+                raise ValueError(
+                    "Field {field} is protected and requires values of type string - "
+                    "got {type(value)}."
+                )
 
             self.const_values[field] = value
 
@@ -417,11 +431,12 @@ class Entlet(object):
         values.update(self.const_values)
         return values
 
-    def standardize_values(self,
-                           standardization_field: str,
-                           filter_ruleset: dict,
-                           standardization_function: Callable
-                           ) -> Entlet:
+    def standardize_values(
+            self,
+            standardization_field: str,
+            filter_rulesets: List[Dict[str, Union[str, Callable]]],
+            standardization_function: Callable
+    ) -> Entlet:
         """
         Substitutes values for their standardized counterparts. Values that are substituted get moved
         to a new '{field_name}_raw' field.
@@ -429,13 +444,13 @@ class Entlet(object):
         Filters should follow the below data structure:
         {
             "field_name": the name of the field
-            "comparator": comparator (from operators),
+            "comparator": a callable that accepts a two arguments,
             "values": ...one or more values...
         }
 
         Args:
             standardization_field (str): The name of the field to be standardized
-            filter_ruleset (dict): See above.
+            filter_rulesets (List[Dict]: See above.
             standardization_function (Callable): The function by which to compare the value on the
                                                  entlet versus the value supplied by the filter_value
                                                  parameter.
@@ -445,6 +460,21 @@ class Entlet(object):
         """
         if standardization_field not in self:
             return self
+
+        root_field = standardization_field.split('.')[0]
+
+        # Global filters are applied against root fields other than the value being standardized
+        # e.g., standardizing 'state' but applying a filter against 'country'
+        global_filters = [fltr for fltr in filter_rulesets if fltr['field_name'].split('.') != root_field]
+        for global_filter in global_filters:
+            # All global filters must pass in order for standardization to occur
+            if not self.test_global_filter(global_filter):
+                return self
+
+        # Scoped filters are applied against fields in the same scope as the values being standardized
+        # e.g., standardizing 'state.iso2' but applying a filter against 'state.type'
+        scoped_filters = [fltr for fltr in filter_rulesets if fltr['field_name'].split('.') == root_field]
+
 
         std_field_split = standardization_field.split(".")
         if len(std_field_split) > 1:
@@ -492,6 +522,70 @@ class Entlet(object):
 
         return self
 
+    def _apply_scoped_filter(
+            self,
+            filter_field: str,
+            filter_value: Any,
+            filter_comparator: Callable
+    ):
+        # Root key for the standardization field and filter are the same - filters are locally
+        # scoped such that individual nested objects must pass the filter
+        filter_field_root_key = filter_field.split('.')[0]
+        filter_nested_field = '.'.join(filter_field.split('.')[1:])
+
+        if standardization_field.split('.')[0] == filter_field_root_key:
+            passed_filter = []
+            did_not_pass_filter = []
+            for nested_obj in self[standardization_field.split('.')[0]]:
+                if filter_comparator(
+                        self.get_recursive(nested_obj, filter_nested_field.split('.')),
+                        filter_value
+                ):
+                    passed_filter.append(nested_obj)
+
+                else:
+                    did_not_pass_filter.append(nested_obj)
+
+            return passed_filter, did_not_pass_filter
+
+    def _test_global_filter(
+            self,
+            filter_field: str,
+            filter_value: Any,
+            filter_comparator: Callable
+    ) -> bool:
+        """
+        Test whether this entlet instance can pass a globally scoped filter.
+
+        When applying a global filter, only ONE value has to pass for the filter to pass.
+        For example, if a filter is "country equals 'US'" and this entlet contains two
+        values under country - "US" and "UK" - then the entlet passes.
+
+        Args:
+            filter_field (str): The name of the field whose values determine the filter outcome
+            filter_value (Any): The value to compare against the field's values
+            filter_comparator (Callable): The method by which the values of 'filter_value' and
+                                          the entlet's values will be compared.
+
+        Returns:
+            (bool) True if this entlet passes the filter, or False if not
+        """
+
+        filter_field_root_key = filter_field.split('.')[0]
+        filter_nested_field = '.'.join(filter_field.split('.')[1:])
+
+        if any(filter_comparator(
+                    self.get_recursive(
+                        filter_obj,
+                        filter_nested_field.split('.')
+                    ),
+                    filter_value
+                ) for filter_obj in self[filter_field_root_key]
+        ):
+            return True
+
+        return False
+
     def _apply_standardization_filters(self,
                                        standardization_field: str,
                                        filter_field: str,
@@ -517,34 +611,7 @@ class Entlet(object):
         filter_field_root_key = filter_field.split('.')[0]
         filter_nested_field = '.'.join(filter_field.split('.')[1:])
 
-        # Root key for the standardization field and filter are the same - filters are locally
-        # scoped such that individual nested objects must pass the filter
-        if standardization_field.split('.')[0] == filter_field_root_key:
-            passed_filter = []
-            did_not_pass_filter = []
-            for nested_obj in self[standardization_field.split('.')[0]]:
-                if filter_comparator(
-                        self.get_recursive(nested_obj, filter_nested_field.split('.')),
-                        filter_value
-                ):
-                    passed_filter.append(nested_obj)
 
-                else:
-                    did_not_pass_filter.append(nested_obj)
-
-            return passed_filter, did_not_pass_filter
-
-        # Root key for the standardization field name and filter are different - filters are
-        # globally scoped such that if any value in the filter field passes, all values in the
-        # standardization field are eligible for standardization
-        elif any([filter_comparator(
-                    self.get_recursive(
-                        filter_obj,
-                        filter_nested_field.split('.')
-                    ),
-                    filter_value
-                  ) for filter_obj in self[filter_field_root_key]]):
-            return self.values[standardization_field], []
 
         # Entlet does not meet filter criteria
         return [], self.values[standardization_field]
@@ -570,7 +637,8 @@ class Entlet(object):
         """
 
         er_fields = defaultdict(set)
-        for strategy, details in config["strategies"].items():
+        #for strategy, details in config["strategies"].items():
+        for strategy, details in {}.items():
             er_fields[strategy].update([a["field_name"] for a in details["similarity"]])
             er_fields[strategy].update([a["field_name"] for a in details["blocking"]])
             if 'filters' in details:

@@ -3,13 +3,16 @@ import os
 from pathlib import Path
 
 from skopeutils.cache_manager import CacheManager
-from skopeutils.config_reader import ConfigReader
+from skopeutils.logger import SkopeLogger
+#from skopeutils.config_reader import ConfigReader
 
 
 __all__ = [
     "ROOT_DIR", "CONFIG_DIR", "DATA_REPO", "VENV_DIR",
     "config", "pipeline_cache", "logger"
 ]
+
+logger = SkopeLogger()
 
 def create_data_folder():
     """
@@ -32,8 +35,8 @@ VENV_DIR = os.path.join(ROOT_DIR, 'venv')
 
 LOG_FILE = os.path.join(CONFIG_DIR, "metadata.json")
 
-config = ConfigReader()
-config.load_config(Path(ROOT_DIR, 'config'))
+#config = ConfigReader()
+#config.load_config(Path(ROOT_DIR, 'config'))
 
 CACHE_MANAGER = CacheManager(Path(ROOT_DIR, 'cache'))
 pipeline_cache = CACHE_MANAGER.create("pipeline_cache", "json")
