@@ -13,7 +13,7 @@ class MetadataManager(object):
     """
 
     STAGE_ORDER = ("fetch", "munge", "standardize", "transform",
-                   "fragment", "resolve", "map", "reduce", "write")
+                   "fragment", "resolution", "map", "reduce", "write")
 
     def __init__(self):
         self.log_file = self.create_file()

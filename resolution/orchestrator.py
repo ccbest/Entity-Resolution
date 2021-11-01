@@ -154,15 +154,15 @@ class EROrchestrator(object):
 
             resolutions = resolutions.union(passed)
 
-        if not os.path.exists(os.path.join(DATA_REPO, "resolve")):
-            os.makedirs(os.path.join(DATA_REPO, "resolve"))
+        if not os.path.exists(os.path.join(DATA_REPO, "resolution")):
+            os.makedirs(os.path.join(DATA_REPO, "resolution"))
 
-        if os.path.exists(os.path.join(DATA_REPO, "resolve", "resolutions")):
-            os.rmdir(os.path.join(DATA_REPO, "resolve", "resolutions"))
+        if os.path.exists(os.path.join(DATA_REPO, "resolution", "resolutions")):
+            os.rmdir(os.path.join(DATA_REPO, "resolution", "resolutions"))
 
-        file_loc = os.path.join(DATA_REPO, "resolve", "resolutions")
+        file_loc = os.path.join(DATA_REPO, "resolution", "resolutions")
         resolutions.write.format("avro").save(file_loc)
-        write_metadata({"resolve": file_loc})
+        write_metadata({"resolution": file_loc})
         return True
 
     def load_fragments(self, strategy):
@@ -202,7 +202,7 @@ class EROrchestrator(object):
     def create_blocks(partitioned, blocking_method, column_name, columns_to_return):
         """
         Takes in a RDD of entlets and returns an RDD of entlet pairs. Entlets are paired according to the specified
-        blocking logic (see resolve.blocking for more details)
+        blocking logic (see resolution.blocking for more details)
 
         Args:
             partitioned: RDD, a subset of the RDD of all entlets
@@ -241,7 +241,7 @@ class EROrchestrator(object):
 
     @staticmethod
     def write_resolutions(resolutions):
-        loc = os.path.join(DATA_REPO, "resolve", "resolutions")
+        loc = os.path.join(DATA_REPO, "resolution", "resolutions")
         resolutions.write.format("csv").options(header='true').save(loc)
         return True
 

@@ -82,7 +82,7 @@ class PreResolveOrchestrator(object):
     def _run_source(self, package_path: Path, stage_args: dict):
         """
         Executes the Fetch and Munge stages for a given data source. After this stage, entlets will
-        be coalesced between sources, so the remaining pre-resolve logic occurs in ._run_pre_resolve()
+        be coalesced between sources, so the remaining pre-resolution logic occurs in ._run_pre_resolve()
 
         Args:
             package_path:

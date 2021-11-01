@@ -77,7 +77,7 @@ class Entlet(object):
 
     def __contains__(self, o):
         """Boolean check if key exists in .values"""
-        return self.const_values.__contains__(o) or self.values.__contains__(o)
+        return self.const_values.__contains__(o) or self.get_recursive(self.values, o.split('.'))
 
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -263,6 +263,10 @@ class Entlet(object):
         # Found the desired setting
         if len(key_parts) == 0 or not key_parts[0]:
             return obj
+
+        # Sub-structure is a list, iterate through
+        if isinstance(obj, list):
+            return [self.get_recursive(sub_obj, key_parts) for sub_obj in obj]
 
         # Look for the next part of the path
         top_level = key_parts.pop(0)
@@ -461,98 +465,99 @@ class Entlet(object):
         if standardization_field not in self:
             return self
 
-        root_field = standardization_field.split('.')[0]
+        root_field = standardization_field.split('.', 1)[0]
 
         # Global filters are applied against root fields other than the value being standardized
         # e.g., standardizing 'state' but applying a filter against 'country'
-        global_filters = [fltr for fltr in filter_rulesets if fltr['field_name'].split('.') != root_field]
+        global_filters = [fltr for fltr in filter_rulesets if fltr['field_name'].split('.', 1)[0] != root_field]
         for global_filter in global_filters:
             # All global filters must pass in order for standardization to occur
-            if not self.test_global_filter(global_filter):
+            if not self._test_global_filter(**global_filter):
                 return self
 
         # Scoped filters are applied against fields in the same scope as the values being standardized
         # e.g., standardizing 'state.iso2' but applying a filter against 'state.type'
-        scoped_filters = [fltr for fltr in filter_rulesets if fltr['field_name'].split('.') == root_field]
+        scoped_filters = [fltr for fltr in filter_rulesets if fltr['field_name'].split('.', 1)[0] == root_field]
+        values = self[root_field]
+        for scoped_filter in scoped_filters:
+            # Whittle down the list of values by applying filters in sequence
+            values = self._apply_scoped_filter(
+                values,
+                scoped_filter["field_name"],
+                scoped_filter["value"],
+                scoped_filter["comparator"]
+            )
 
-
-        std_field_split = standardization_field.split(".")
-        if len(std_field_split) > 1:
-            standardization_nested_field = std_field_split[1:]
-        else:
-            standardization_nested_field = ['']
-
-        passed_filter, did_not_pass_filter = self._apply_standardization_filters(
-            standardization_field,
-            filter_ruleset["field_name"],
-            filter_ruleset["value"],
-            filter_ruleset["comparator"]
-        )
-
-        # Non-nested values should be copied because they'll be modified during iteration, but
-        # nested values need their references preserved
-        for value in passed_filter.copy():
+        # TODO: Refactor. Seems to work for now but i don't know how
+        for value in values.copy():
             if isinstance(value, dict):
-                original_value = self.get_recursive(value, standardization_nested_field)
+                original_value = self.get_recursive(value, standardization_field.split('.')[1:])
             else:
                 original_value = value
 
             standardized_value = standardization_function(original_value)
 
-            if original_value != standardized_value:
-
-                # If the field is nested, we add a {field}_raw field on to the nested object
-                if isinstance(value, dict):
-                    parent_of_value = self.get_recursive(
-                        value,
-                        std_field_split[1:-1]
-                    )
-                    parent_of_value.update({
-                        f"{std_field_split[-1]}_raw": original_value,
-                        std_field_split[-1]: standardized_value
-                    })
-                    continue
-
-                # If the field isn't nested, the old values get pushed to a new root field
-                self[standardization_field].remove(original_value)
-                self.add({
-                    standardization_field: standardized_value,
-                    f"{standardization_field}_raw": original_value
+            # If the field is nested, we add a {field}_raw field on to the nested object
+            if isinstance(value, dict):
+                parent_of_value = self.get_recursive(
+                    value,
+                    standardization_field.split('.')[1:-1]
+                )
+                parent_of_value.update({
+                    f"{standardization_field.split('.')[-1]}_raw": original_value,
+                    standardization_field.split('.')[-1]: standardized_value
                 })
+                continue
+
+            # If the field isn't nested, the old values get pushed to a new root field
+            self[standardization_field].remove(original_value)
+            self.add({
+                standardization_field: standardized_value,
+                f"{standardization_field}_raw": original_value
+            })
 
         return self
 
     def _apply_scoped_filter(
             self,
+            values: List[Any],
             filter_field: str,
             filter_value: Any,
             filter_comparator: Callable
     ):
-        # Root key for the standardization field and filter are the same - filters are locally
-        # scoped such that individual nested objects must pass the filter
-        filter_field_root_key = filter_field.split('.')[0]
-        filter_nested_field = '.'.join(filter_field.split('.')[1:])
+        """
+        Root key for the standardization field and filter are the same - filters are locally
+        scoped such that individual nested objects must pass the filter
 
-        if standardization_field.split('.')[0] == filter_field_root_key:
-            passed_filter = []
-            did_not_pass_filter = []
-            for nested_obj in self[standardization_field.split('.')[0]]:
-                if filter_comparator(
-                        self.get_recursive(nested_obj, filter_nested_field.split('.')),
-                        filter_value
-                ):
-                    passed_filter.append(nested_obj)
+        Args:
+            values:
+            filter_field:
+            filter_value:
+            filter_comparator:
 
-                else:
-                    did_not_pass_filter.append(nested_obj)
+        Returns:
 
-            return passed_filter, did_not_pass_filter
+        """
+        split = filter_field.split('.')
+        if len(split) > 1:
+            filter_nested_field = split[1:]
+        else:
+            filter_nested_field = split
+
+        passed_filter = []
+
+        for value in values:
+            check_value = self.get_recursive(value, filter_nested_field)
+            if filter_comparator(check_value, filter_value):
+                passed_filter.append(value)
+
+        return passed_filter
 
     def _test_global_filter(
             self,
-            filter_field: str,
-            filter_value: Any,
-            filter_comparator: Callable
+            field_name: str,
+            value: Any,
+            comparator: Callable
     ) -> bool:
         """
         Test whether this entlet instance can pass a globally scoped filter.
@@ -562,8 +567,8 @@ class Entlet(object):
         values under country - "US" and "UK" - then the entlet passes.
 
         Args:
-            filter_field (str): The name of the field whose values determine the filter outcome
-            filter_value (Any): The value to compare against the field's values
+            field_name (str): The name of the field whose values determine the filter outcome
+            value (Any): The value to compare against the field's values
             filter_comparator (Callable): The method by which the values of 'filter_value' and
                                           the entlet's values will be compared.
 
@@ -571,15 +576,15 @@ class Entlet(object):
             (bool) True if this entlet passes the filter, or False if not
         """
 
-        filter_field_root_key = filter_field.split('.')[0]
-        filter_nested_field = '.'.join(filter_field.split('.')[1:])
+        filter_field_root_key = field_name.split('.')[0]
+        filter_nested_field = '.'.join(field_name.split('.')[1:])
 
-        if any(filter_comparator(
+        if any(comparator(
                     self.get_recursive(
                         filter_obj,
                         filter_nested_field.split('.')
                     ),
-                    filter_value
+                    value
                 ) for filter_obj in self[filter_field_root_key]
         ):
             return True

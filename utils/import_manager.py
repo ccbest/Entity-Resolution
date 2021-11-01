@@ -122,8 +122,8 @@ class ImportManager(object):
         Returns:
 
         """
-        resolve_loc = PathManager("resolve").from_project_root()
-        similarity_funcs = self.get_functions_in_dir(resolve_loc / "similarity_measures")
+        resolve_loc = PathManager("resolution").from_project_root()
+        similarity_funcs = self.get_functions_in_dir(resolve_loc / "transforms")
         self.register_function({"similarity": similarity_funcs})
 
         similarity_funcs = self.get_functions_in_dir(resolve_loc / "score_aggregation")
@@ -132,8 +132,8 @@ class ImportManager(object):
         similarity_funcs = self.get_functions_in_dir(resolve_loc / "comparison_metrics")
         self.register_function({"comparison_metrics": similarity_funcs})
 
-        similarity_funcs = self.get_functions_in_dir(resolve_loc / "blocking_methods")
-        self.register_function({"blocking_methods": similarity_funcs})
+        similarity_funcs = self.get_functions_in_dir(resolve_loc / "blockers")
+        self.register_function({"blockers": similarity_funcs})
 
 
 

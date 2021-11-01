@@ -1,5 +1,6 @@
+from pandas import DataFrame
 
-
+from . import ResolutionBlocker
 
 def all_to_all(df, **kwargs):
     """
@@ -23,4 +24,7 @@ def all_to_all(df, **kwargs):
     return no_index.filter(lambda x: x[0].entlet_id != x[1].entlet_id)
 
 
+class AllToAll(ResolutionBlocker):
 
+    def block(self, df: DataFrame(columns=['entlet'])) -> DataFrame(columns=['entlet1', 'entlet2']):
+        pass

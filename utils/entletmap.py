@@ -113,7 +113,7 @@ class EntletMap(MutableMapping):
         self._strategies.append(strategy)
         return self
 
-    def resolve(self):
+    def resolve(self, strategies: List[ResolutionStrategy]):
         """
         Executes entity resolution.
 
@@ -126,3 +126,19 @@ class EntletMap(MutableMapping):
             entlet_df = entlet_df.apply(standardization.run)
 
         return entlet_df
+
+    def to_dataframe(self) -> pd.DataFrame:
+        """
+        Converts the entletmap to a dataframe.
+
+        Returns:
+            (pd.DataFrame) A pandas dataframe with one column containing the entlet objects
+        """
+        return pd.DataFrame(self.entlets.values(), columns=['entlet'])
+
+
+
+class ResolutionPipeline:
+
+    def __init__(self, entletmap: EntletMap):
+        self.entlet_df = entletmap.to_dataframe()

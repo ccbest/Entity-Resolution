@@ -1,6 +1,35 @@
-from pyspark.ml.feature import HashingTF, IDF, Tokenizer, StopWordsRemover, Normalizer, CountVectorizer, NGram
-from pyspark.mllib.linalg.distributed import IndexedRow, IndexedRowMatrix
-from pyspark.ml import Pipeline
+
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+from . import ColumnarTransform
+
+
+class TfIdfTokenizedTransform(ColumnarTransform):
+
+    VECTORIZER = TfidfVectorizer()
+
+
+    def __init__(self, field, **kwargs):
+        self.field = field
+        self.kwargs = kwargs
+
+    @property
+    def new_col_name(self):
+        return f"{self.field}_tfidf_tokenized"
+
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+
+        Args:
+            df:
+
+        Returns:
+
+        """
+        df[self.new_col_name] = list(self.VECTORIZER.fit_transform(df[self.field]))
+        return df
+
 
 
 def tfidf_tokens(df, column_name, **kwargs):

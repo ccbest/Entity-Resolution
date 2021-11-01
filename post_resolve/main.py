@@ -19,7 +19,7 @@ def create_entmap():
     metadata = read_metadata()
 
     # Read entlet json, just for the unique list of entlets
-    # TODO: Once entlet -> resolve switches to spark streaming, it should write out this list so we dont have to
+    # TODO: Once entlet -> resolution switches to spark streaming, it should write out this list so we dont have to
     # union everything together
     entlets = spark.spark_context.emptyRDD()
     for dsource, file in metadata["munge"].items():
@@ -30,8 +30,8 @@ def create_entmap():
     entlets = entlets.keyBy(lambda x: x[0])
 
     # Read the list of edges in
-    edges = spark.spark_session.read.format("avro").load(metadata["resolve"]).select(col("source_id").alias("src"), col("target_id").alias("dst"))
-    edges = edges.union(spark.spark_session.read.format("avro").load(metadata["resolve"]).select(col("source_id").alias("dst"),
+    edges = spark.spark_session.read.format("avro").load(metadata["resolution"]).select(col("source_id").alias("src"), col("target_id").alias("dst"))
+    edges = edges.union(spark.spark_session.read.format("avro").load(metadata["resolution"]).select(col("source_id").alias("dst"),
                                                                        col("target_id").alias("src")))
 
     spark_context.setCheckpointDir("/tmp/graphframes-example-connected-components")
