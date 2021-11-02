@@ -9,10 +9,12 @@ class TfIdfTokenizedTransform(ColumnarTransform):
 
     VECTORIZER = TfidfVectorizer()
 
-
     def __init__(self, field, **kwargs):
         self.field = field
         self.kwargs = kwargs
+
+    def __hash__(self):
+        return hash(f"tfidftokenized_{self.field}_{str(self.kwargs)}")
 
     @property
     def new_col_name(self):
@@ -31,32 +33,6 @@ class TfIdfTokenizedTransform(ColumnarTransform):
         return df
 
 
-
-def tfidf_tokens(df, column_name, **kwargs):
-    """
-    Takes a column and returns bag of words TFIDF vectors for each value
-
-    Args:
-        df: a dataframe, must contain column "entlet_id"
-        column_name: the name of the column to transform
-        **kwargs:
-
-    Returns:
-        df with the following added columns:
-            {field}_token (list)
-            {field}_swremoved (list)
-            {field}_token_tf (SparseVector)
-            {field}_token_idf (SparseVector)
-        (str) {field}_token_idf
-    """
-    tokenized = Tokenizer(inputCol=column_name, outputCol=f'{column_name}_token')
-    stopWordsRemover = StopWordsRemover(inputCol=f'{column_name}_token', outputCol=f'{column_name}_swremoved')
-    hashed_tf = HashingTF(inputCol=f'{column_name}_swremoved', outputCol=f'{column_name}_token_tf')
-    idf = IDF(inputCol=f'{column_name}_token_tf', outputCol=f'{column_name}_token_idf')
-
-    pipeline = Pipeline(stages=[tokenized, stopWordsRemover, hashed_tf, idf])
-    model = pipeline.fit(df)
-    return model.transform(df), f'{column_name}_token_idf'
 
 
 def tfidf_ngrams(df, column_name, **kwargs):

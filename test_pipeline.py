@@ -3,9 +3,7 @@ from pathlib import Path
 
 import operator
 
-from data_sources.usafacts.munge import munge
-
-from pre_resolve.standardize.custom_lookup import UsState2Code
+from resolver.standardize import UsState2Code
 
 from utils.entletmap import EntletMap
 from utils.entlet import Entlet

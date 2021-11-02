@@ -591,35 +591,6 @@ class Entlet(object):
 
         return False
 
-    def _apply_standardization_filters(self,
-                                       standardization_field: str,
-                                       filter_field: str,
-                                       filter_value: Any,
-                                       filter_comparator: Callable
-                                       ) -> Tuple[List, List]:
-        """
-        Applies filters that are defined by standardization configuration.
-
-        Args:
-            standardization_field (str):
-            filter_field (str): The name of the field whose values will determine whether or not
-                                the filter is passed
-            filter_value (Any): The value to filter according to. For example, if the filter
-                                criteria were >= 1, "1" would be the filter value.
-            filter_comparator (Callable): The function by which to compare the value on the entlet
-                                          versus the value supplied by the filter_value parameter.
-
-        Returns:
-            (Tuple[List, List]) A tuple with two elements. The first element is those values which
-            passed the filter, the second is the ones which didn't.
-        """
-        filter_field_root_key = filter_field.split('.')[0]
-        filter_nested_field = '.'.join(filter_field.split('.')[1:])
-
-
-
-        # Entlet does not meet filter criteria
-        return [], self.values[standardization_field]
 
     def clear(self) -> Entlet:
         """Removes all values stored on the entlet. Really should only be used in testing."""

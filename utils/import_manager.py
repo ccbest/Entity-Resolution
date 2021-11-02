@@ -132,8 +132,8 @@ class ImportManager(object):
         similarity_funcs = self.get_functions_in_dir(resolve_loc / "comparison_metrics")
         self.register_function({"comparison_metrics": similarity_funcs})
 
-        similarity_funcs = self.get_functions_in_dir(resolve_loc / "blockers")
-        self.register_function({"blockers": similarity_funcs})
+        similarity_funcs = self.get_functions_in_dir(resolve_loc / "blocking")
+        self.register_function({"blocking": similarity_funcs})
 
 
 

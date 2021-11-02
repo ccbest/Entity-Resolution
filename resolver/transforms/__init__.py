@@ -12,9 +12,15 @@ class ColumnarTransform(abc.ABC):
         self.kwargs: Dict[str, Any]
 
     @abc.abstractmethod
+    def __hash__(self):
+        pass
+
+    @abc.abstractmethod
     def transform(self, df: DataFrame) -> DataFrame:
         """
-        Executes the blocking logic against a DataFrame
+        Executes a transform against a given column.
+
+        Example: vectorizing textual data using TF-IDF
 
         Args:
             df (pandas.DataFrame): A pandas dataframe of fragments, containing at
@@ -24,3 +30,4 @@ class ColumnarTransform(abc.ABC):
         Returns:
             (pandas.DataFrame) A pandas dataframe
         """
+

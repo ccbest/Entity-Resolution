@@ -23,20 +23,12 @@ class UsState2Code(StandardizationTransform):
         self.field = field
         self.filters = filters or []
 
-    @staticmethod
-    def _apply_filter(entlet: Entlet, std_filter: Dict[str, str]) -> bool:
-        pass
+    def standardize(self, value: str) -> str:
+        return self.RESOURCE.get(value.upper(), value)
 
     def run(self, entlet: Entlet) -> Entlet:
         return entlet.standardize_values(
             self.field,
             self.filters,
-            lambda x: self.RESOURCE.get(x.upper(), x)
+            self.standardize
         )
-
-
-"""
-DEBUG:
-filters = {'country': {'comparator': '==', 'values': ['US']}}
-
-"""

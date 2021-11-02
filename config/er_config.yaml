@@ -30,10 +30,10 @@ strategies:
     partition:
       - "state"
       - "country"
-    similarity:
+    metrics:
       - field_name: "name.name"
-        measurement: "tfidf_tokens"
-        comparison: "cosine_similarity"
+        transform: "tfidf_tokens"
+        evaluation: "cosine_similarity"
     blocking:
       - method: "alphabetical_neighborhood"
         field_name: "name.name"

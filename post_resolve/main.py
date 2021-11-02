@@ -30,9 +30,9 @@ def create_entmap():
     entlets = entlets.keyBy(lambda x: x[0])
 
     # Read the list of edges in
-    edges = spark.spark_session.read.format("avro").load(metadata["resolution"]).select(col("source_id").alias("src"), col("target_id").alias("dst"))
+    edges = spark.spark_session.read.format("avro").load(metadata["resolution"]).select(col("source_id").alias("resolver"), col("target_id").alias("dst"))
     edges = edges.union(spark.spark_session.read.format("avro").load(metadata["resolution"]).select(col("source_id").alias("dst"),
-                                                                       col("target_id").alias("src")))
+                                                                       col("target_id").alias("resolver")))
 
     spark_context.setCheckpointDir("/tmp/graphframes-example-connected-components")
     components = graphframes.GraphFrame(nodes, edges).connectedComponents()

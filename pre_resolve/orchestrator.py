@@ -1,6 +1,5 @@
 
 from collections import defaultdict
-import json
 import operator
 from pathlib import Path
 import threading
@@ -10,8 +9,7 @@ import pandas as pd
 from skopeutils.dynamic_importer import DynamicImporter
 
 from definitions import config, pipeline_cache, DATA_REPO, logger, ROOT_DIR
-import pre_resolve.standardize.custom_lookup as custom_lookup
-from utils.entlet import Entlet
+import resolver.standardize.custom_lookup as custom_lookup
 
 data_source_functions = DynamicImporter()
 data_source_functions.load(Path(ROOT_DIR, 'data_sources'))
@@ -28,14 +26,7 @@ class PreResolveOrchestrator(object):
 
     """
 
-    COMPARATORS = {
-        "equals": operator.eq,
-        "does not equal": operator.ne,
-        "less than": operator.lt,
-        "greater than": operator.gt,
-        "less than or equal to": operator.le,
-        "greater than or equal to": operator.ge
-    }
+
 
     def __init__(self, **kwargs):
         self.sources_to_run = kwargs.get("sources", None)

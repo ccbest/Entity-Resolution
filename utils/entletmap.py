@@ -5,7 +5,7 @@ from typing import List, MutableMapping, Iterator, Tuple
 import pandas as pd
 
 from utils.entlet import Entlet
-from pre_resolve.standardize import StandardizationTransform
+from resolver.standardize import StandardizationTransform
 
 
 class EntletMap(MutableMapping):
@@ -142,3 +142,8 @@ class ResolutionPipeline:
 
     def __init__(self, entletmap: EntletMap):
         self.entlet_df = entletmap.to_dataframe()
+
+    def _produce_fragments(self, df: pd.DataFrame, fields: List[str]) -> pd.DataFrame(columns=['fragment']):
+
+        pass
+

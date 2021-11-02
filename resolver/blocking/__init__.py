@@ -6,8 +6,7 @@ from pandas import DataFrame
 
 class ResolutionBlocker(abc.ABC):
 
-    def __init__(self, field: str, ):
-        self.field: str
+    field: str
 
     @abc.abstractmethod
     def block(self, df: DataFrame(columns=['fragment'])) -> DataFrame(columns=['entlet1', 'entlet2']):
@@ -20,3 +19,6 @@ class ResolutionBlocker(abc.ABC):
         Returns:
             (pandas.DataFrame) A pandas dataframe containing two columns 'entlet1', 'entlet2'
         """
+
+from .text import *
+from .generic import *
