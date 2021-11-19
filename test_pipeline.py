@@ -1,12 +1,10 @@
 
 from pathlib import Path
-
 import operator
 
-from resolver.standardize import UsState2Code
+from resolver import Entlet, EntletMap, Pipeline
+from resolver.standardizers import UsState2Code
 
-from utils.entletmap import EntletMap
-from utils.entlet import Entlet
 
 file = Path("/Users/carlbest/Desktop/malak/covid_confirmed_usafacts.csv")
 # entlets = munge(file)
@@ -34,13 +32,20 @@ test_entlet.add({
 emap = EntletMap([test_entlet])
 state_std = UsState2Code(
     "state",
-    filters = [{
+    filters=[{
             "field_name": "country",
             "comparator": operator.eq,
             "value": "US"
     }]
 )
 
-state_std.run(test_entlet)
+pipeline = Pipeline([state_std], [])
+self = pipeline
 
-emap.standardize(state_std)
+entlet_df = emap.to_dataframe()
+
+# Standardize stage
+entlet_df = self.standardize_entlets(entlet_df, self.standardizers)
+
+
+### STRATEGIES

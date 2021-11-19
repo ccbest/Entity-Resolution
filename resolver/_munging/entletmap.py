@@ -4,13 +4,14 @@ from typing import List, MutableMapping, Iterator, Tuple
 
 import pandas as pd
 
-from utils.entlet import Entlet
-from resolver.standardize import StandardizationTransform
+from . import Entlet
 
 
 class EntletMap(MutableMapping):
 
-    def __init__(self, entlets: List[Entlet] = {}):
+    def __init__(self, entlets: List[Entlet] = None):
+
+        entlets = entlets or []
         self.entlets = {
             entlet.entlet_id: entlet for entlet in entlets
         }
@@ -68,7 +69,7 @@ class EntletMap(MutableMapping):
 
     def add(self, entlet: Entlet) -> EntletMap:
         """
-        Adds an entlet to the mapping
+        Adds an entlet to the map
 
         Args:
             entlet (Entlet): the entlet to add
@@ -76,28 +77,11 @@ class EntletMap(MutableMapping):
         Returns:
             self
         """
+        if entlet.entlet_id in self.entlets:
+            self.entlets[entlet.entlet_id].merge(entlet)
+            return self
+
         self.entlets[entlet.entlet_id] = entlet
-        return self
-
-    def standardize(self, *args: Tuple[StandardizationTransform]) -> EntletMap:
-        """
-        Stages a standardization transform.
-
-        The transform will be applied against the entlet DataFrame, which will
-        not be available until pre-resolution occurs.
-
-        Args:
-            transform (StandardizationTransform): a standardization transformer
-
-        Returns:
-            self
-        """
-        for transform in args:
-            if not isinstance(transform, StandardizationTransform):
-                raise ValueError(f"Expected a StandardizationTransform instance, received {type(transform)}")
-
-            self._standardizations.append(transform)
-
         return self
 
     def add_strategy(self, strategy) -> EntletMap:

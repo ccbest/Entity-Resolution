@@ -5,10 +5,12 @@ from typing import List, Optional
 import pandas as pd
 
 from .blocking import ResolutionBlocker
-from .filter import Filter
+from .filter import ScopedFilter
 from .scoring import ScoringReducer
-from .transforms import ColumnarTransform
-from .metrics import ResolutionMetric
+from ._base import ColumnarTransform, SimilarityMetric
+from ._munging.entlet import Entlet
+from ._munging.entletmap import EntletMap
+from ._pipeline import Pipeline
 
 
 class Strategy:
@@ -16,10 +18,10 @@ class Strategy:
     def __init__(
         self,
         block_by: ResolutionBlocker,
-        computed_metrics: List[ResolutionMetric],
+        computed_metrics: List[SimilarityMetric],
         scoring_method: ScoringReducer,
         partitions: Optional[List[str]] = None,
-        filters: Optional[List[Filter]] = None
+        filters: Optional[List[ScopedFilter]] = None
     ):
         self.block_by = block_by
         self.metrics = computed_metrics

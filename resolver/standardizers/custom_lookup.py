@@ -5,13 +5,13 @@ from typing import Dict, List
 
 from definitions import logger, ROOT_DIR
 
-from utils.entlet import Entlet
-from . import StandardizationTransform
+from .._munging.entlet import Entlet
+from .._base import StandardizationTransform
 
 
 class UsState2Code(StandardizationTransform):
 
-    RESOURCE_PATH = Path(ROOT_DIR, "pre_resolve", "standardize", "resources", "us_state_two_code.csv")
+    RESOURCE_PATH = Path(ROOT_DIR, "resolver", "standardizers", "resources", "us_state_two_code.csv")
 
     RESOURCE = {
         line[0]: line[1] for line in csv.reader(

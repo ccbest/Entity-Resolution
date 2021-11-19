@@ -24,7 +24,7 @@ def create_data_folder():
     data_path = os.path.join(os.path.expanduser("~"), "covid_data")
     if not os.path.exists(data_path):
         os.makedirs(data_path)
-        logger.info(f"Created data folder at location {data_path}")
+        logger.logger.info(f"Created data folder at location {data_path}")
     return data_path
 
 
@@ -41,6 +41,3 @@ LOG_FILE = os.path.join(CONFIG_DIR, "metadata.json")
 CACHE_MANAGER = CacheManager(Path(ROOT_DIR, 'cache'))
 pipeline_cache = CACHE_MANAGER.create("pipeline_cache", "json")
 
-logger = logging.getLogger('Revan')
-logging.basicConfig()
-logger.setLevel(logging.DEBUG)
