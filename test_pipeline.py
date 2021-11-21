@@ -6,7 +6,7 @@ from resolver import Entlet, EntletMap, Pipeline
 from resolver.standardizers import UsState2Code
 
 
-file = Path("/Users/carlbest/Desktop/malak/covid_confirmed_usafacts.csv")
+# file = Path("/Users/carlbest/Desktop/malak/covid_confirmed_usafacts.csv")
 # entlets = munge(file)
 
 Entlet.define_source_uid_field("countyFIPS")
@@ -49,3 +49,6 @@ entlet_df = self.standardize_entlets(entlet_df, self.standardizers)
 
 
 ### STRATEGIES
+from resolver.blocking.text import SortedNeighborhood
+from resolver.similarity.vectors import CosineSimilarity
+

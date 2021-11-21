@@ -10,7 +10,7 @@ from ._base import StandardizationTransform
 
 class Pipeline:
 
-    def __init__(self, standardizers: Collection[StandardizationTransform], strategies):
+    def __init__(self, strategies, standardizers: Collection[StandardizationTransform] = None):
 
         self.standardizers = standardizers
         self.strategies = strategies
@@ -21,15 +21,10 @@ class Pipeline:
         # Standardize stage
         entlet_df = self.standardize_entlets(entlet_df, self.standardizers)
 
-
-
     @staticmethod
     def standardize_entlets(entlet_df: pd.DataFrame, standardizers: Collection[StandardizationTransform]) -> pd.DataFrame:
         """
-        Stages a standardization transform.
-
-        The transform will be applied against the entlet DataFrame, which will
-        not be available until pre-resolution occurs.
+        Async application of standardization against the dataframe of entlets.
 
         Args:
             entlet_df (pd.DataFrame): a dataframe of entlets
@@ -39,9 +34,15 @@ class Pipeline:
             self
         """
         for standardizer in standardizers:
-            entlet_df.applymap(lambda x: standardizer.run(x))
+            entlet_df.applymap(standardizer.run)
 
         return entlet_df
 
-    @staticmethod
-    def fragment(entlet_df: pd.DataFrame) -> pd.DataFrame:
+    def fragment(self, entlet_df: pd.DataFrame) -> pd.DataFrame:
+
+        for strategy in self.strategies:
+            frag_fields = strategy.get_fragment_fields()
+            fragments = entlet_df.applymap(lambda x: list(x.get_fragments(frag_fields)))
+
+            yield fragments.unstack().reset_index(drop=True)
+

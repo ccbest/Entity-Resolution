@@ -2,7 +2,7 @@
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from . import ColumnarTransform
+from resolver._base import ColumnarTransform
 
 
 class TfIdfTokenizedTransform(ColumnarTransform):

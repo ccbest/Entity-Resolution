@@ -23,8 +23,6 @@ class Entlet(object):
     """
     UID_FIELDS = ['data_source', 'ent_type']
 
-    ER_FIELDS = {}
-
     CUSTOM_UID_FIELDS = None
     SOURCE_UID_FIELD = None
 
@@ -34,12 +32,6 @@ class Entlet(object):
 
         self.fields = set()
         self.const_values = {}
-
-        if not self.ER_FIELDS:
-            self.define_fragment_fields()
-
-        # The RDD can't access the class, so this needs to be copied to the instance
-        self.er_fields = self.ER_FIELDS
 
     @property
     def required_fields(self) -> List[str]:
@@ -275,51 +267,66 @@ class Entlet(object):
 
         return self.get_recursive(obj[top_level], key_parts)
 
-    def add(self, obj: dict):
+    def add(self, obj: Dict[str, Any]) -> Entlet:
         """
-        Add values to this entlet.
+        Add values to the Entlet instance. All entlet values (except special reserved fields - see below)
+        are stored in lists and their data structures are preserved - see below examples. Values passed
+        as a list will be unpacked.
+
+        Reserved fields - fields that are used to generate the entlet_id via the define_source_uid_field
+        and define_individual_uid methods - are NOT stored as lists because values must be singular in order
+        to generate the id.
 
         Args:
-            obj (dict)
+            obj (Dict[str, Any])
 
         Returns:
-            None
+            self
 
         Examples:
             # Add single value to a field. The key will be used as the field name.
             entlet = Entlet()
             entlet.add({"a": 1, "b": 2})
-            entlet.values
-            {"a": [1], "b": [2]}
+
+            # Result: {"a": [1], "b": [2]}
+
 
             # Add nested fields in order to retain associated between the values.
             entlet = Entlet()
             entlet.add({a: {"b": 1, "c": 2}})
-            entlet.values
-            {"name": [{"name": "Carl, "type": "first"}]}
+
+            # Result: {"name": [{"b": 1, "c": 2}]}
+
 
             # Add multiple values in one call.
             entlet = Entlet()
             entlet.add({a: [1, 2], b: [{"b": 3, "c": 4}, {"b": 5, "c": 6}]})
-            entlet.values
-            {"a": [1, 2], "b": [{"b": 3, "c": 4}, {"b": 5, "c": 6}]}
 
-            # Duplicates are dropped within each key. Associated fields only drop if all values are duplicate.
+            # Result: {"a": [1, 2], "b": [{"b": 3, "c": 4}, {"b": 5, "c": 6}]}
+
+
+            # Duplicates are dropped within each key. Nested data structures only deduplicate if the
+            # entire structure is duplicated.
             entlet = Entlet()
             entlet.add({a: 1, b: 2, c: {"c": 2, "d": 3}})
             entlet.add({a: 1, b: 3, c: {"c": 2, "d": 4}})
             entlet.add({c: {"c": 2, "d": 3}})
-            entlet.values
-            {"a": [1], "b": [2, 3], "c": [{"c": 2, "d": 3}, {"c": 2, "d": 4}]}
 
-            # Values must be of the same type per field or will throw an error
+            # Result: {"a": [1], "b": [2, 3], "c": [{"c": 2, "d": 3}, {"c": 2, "d": 4}]}
+
+
+            # Values in a field must be of the same datatype
             entlet = Entlet()
-            entlet.add({a: [1, 2, "string"]})   (ValueError)
+            entlet.add({a: [1, 2, "example"]})
 
-            # All required fields must be added using this method. These fields must have one value per Entlet
-            # and will be stored as strings.
+            # Result: ValueError
+
+
+            # The key entlet_id is reserved and cannot be added
             entlet = Entlet()
             entlet.add({entlet_id: "id123", ent_type: "entity"})
+
+            # Result: KeyError
 
         """
         def merge_values(a, b, _path):
@@ -358,8 +365,10 @@ class Entlet(object):
 
         return self
 
-    def merge(self, obj):
+    def merge(self, entlet: Entlet) -> Entlet:
         """
+        Merges another entlet instance into this one.
+
         Accepts the .dump() from another entlet. Should not be used outside of rollup.
         Functionally the same as .add() except doesn't check for constant fields
 
@@ -383,26 +392,26 @@ class Entlet(object):
 
             raise ValueError(f"Field {_path} expected type {type(a[0])}, received type {type(b)}")
 
-        for key in obj:
+        for key in entlet.dump():
             if key not in self.values:
-                if isinstance(obj[key], list):
-                    self.values[key] += obj[key]
+                if isinstance(entlet[key], list):
+                    self.values[key] += entlet[key]
 
                 elif isinstance(self.values[key], list):
-                    self.values[key].append(obj[key])
+                    self.values[key].append(entlet[key])
 
                 else:
-                    self.values[key] = [self.values[key], obj[key]]
+                    self.values[key] = [self.values[key], entlet[key]]
 
             else:
-                merge_values(self.values[key], obj[key], key)
+                merge_values(self.values[key], entlet[key], key)
 
         return self
 
     def _set_const(self, obj):
         """
-        Set constant values on the entlet. Ensures constant values don't get overwritten, which would indicate
-        a problem with munge.
+        Workaround for python's lack of ability to set constant values. Ensures the entlet's constant values
+        don't get overwritten, which would indicate a problem with munge.
 
         Constant values are critical to producing an entlet_id, and so values must be strings.
 
@@ -426,13 +435,14 @@ class Entlet(object):
 
     def dump(self) -> Dict[str, Union[list, str]]:
         """
-        Return all information stored on the entlet as a dictionary.
+        Return all information stored on the entlet as a dictionary. Structures are deep copied
+        to avoid unexpected mutation.
 
         Returns:
             Dict[str, Union[list, str]]
         """
         values = deepcopy(dict(self.values))
-        values.update(self.const_values)
+        values.update(self.const_values.copy())
         return values
 
     def standardize_values(
@@ -445,7 +455,10 @@ class Entlet(object):
         Substitutes values for their standardized counterparts. Values that are substituted get moved
         to a new '{field_name}_raw' field.
 
-        Filters should follow the below data structure:
+        **IMPORTANT**
+        Standardization can be either scoped or "global" based on applied filters
+
+        Filters must follow the below data structure:
         {
             "field_name": the name of the field
             "comparator": a callable that accepts a two arguments,
@@ -526,17 +539,21 @@ class Entlet(object):
             filter_comparator: Callable
     ):
         """
+        Filters a list of data structures down to just the ones that pass the provided filter logic.
+
         Root key for the standardization field and filter are the same - filters are locally
         scoped such that individual nested objects must pass the filter
 
         Args:
-            values:
-            filter_field:
-            filter_value:
-            filter_comparator:
+            values (List[Any]): The list of data structures to be filtered
+            filter_field (str): The name of the field on the data structure whos value is being evaluated
+            filter_value (Any): The value that will be compared against the value provided by filter_field
+            filter_comparator (Callable): The function that will evaluate filter_value against the
+                                          the value provided by filter_field. Must return a boolean.
 
         Returns:
-
+            List[Any] The same list passed to the 'values' param, reduced to only those which passed
+            the filter
         """
         split = filter_field.split('.')
         if len(split) > 1:
@@ -562,6 +579,7 @@ class Entlet(object):
         """
         Test whether this entlet instance can pass a globally scoped filter.
 
+        **IMPORTANT**
         When applying a global filter, only ONE value has to pass for the filter to pass.
         For example, if a filter is "country equals 'US'" and this entlet contains two
         values under country - "US" and "UK" - then the entlet passes.
@@ -569,8 +587,8 @@ class Entlet(object):
         Args:
             field_name (str): The name of the field whose values determine the filter outcome
             value (Any): The value to compare against the field's values
-            filter_comparator (Callable): The method by which the values of 'filter_value' and
-                                          the entlet's values will be compared.
+            comparator (Callable): The method by which the values of 'filter_value' and
+                                   the entlet's values will be compared.
 
         Returns:
             (bool) True if this entlet passes the filter, or False if not
@@ -580,17 +598,13 @@ class Entlet(object):
         filter_nested_field = '.'.join(field_name.split('.')[1:])
 
         if any(comparator(
-                    self.get_recursive(
-                        filter_obj,
-                        filter_nested_field.split('.')
-                    ),
-                    value
-                ) for filter_obj in self[filter_field_root_key]
+                self.get_recursive(filter_obj, filter_nested_field.split('.')),
+                value
+            ) for filter_obj in self[filter_field_root_key]
         ):
             return True
 
         return False
-
 
     def clear(self) -> Entlet:
         """Removes all values stored on the entlet. Really should only be used in testing."""
@@ -598,36 +612,7 @@ class Entlet(object):
         self.const_values.clear()
         return self
 
-    @classmethod
-    def define_fragment_fields(cls) -> None:
-        """
-        Parses the ER configuration so we can understand what fields are needed by which strategies.
-        Updates the Entlet class to reflect these requirements, stored as below:
-
-        {
-            strategy_name: [ field_names ]
-        }
-
-        Returns:
-            None
-        """
-
-        er_fields = defaultdict(set)
-        #for strategy, details in config["strategies"].items():
-        for strategy, details in {}.items():
-            er_fields[strategy].update([a["field_name"] for a in details["similarity"]])
-            er_fields[strategy].update([a["field_name"] for a in details["blocking"]])
-            if 'filters' in details:
-                er_fields[strategy].update([a["field_name"] for a in details["filters"]])
-
-            if 'partition' in details:
-                er_fields[strategy].update(details["partition"])
-
-            er_fields[strategy].add("entlet_id")
-
-        cls.ER_FIELDS = dict(er_fields)
-
-    def _produce_fragment_product(self, obj: dict, field_names: set):
+    def _produce_fragment_product(self, obj: Dict[str, Any], field_names: List[str]):
         """
         Produces a cartesian product of a dictionary based on its values. Empty values are
         effectively treated as multiplying by 1 rather than multiplying by 0.
@@ -708,7 +693,7 @@ class Entlet(object):
 
             yield processed_frag
 
-    def get_fragments(self, strategy_name) -> Generator[dict, None, None]:
+    def get_fragments(self, fragment_fields: List[str]) -> Generator[dict, None, None]:
         """
         Primary method of execution for producing fragments from entlets.
 
@@ -718,7 +703,7 @@ class Entlet(object):
         Ensures all fragments retain the "entlet_id" field, which is critical for ER.
 
         Args:
-            strategy_name (str): The name of the strategy.
+            fragment_fields (List[str]): The list of fields that will be used in fragmenting
 
         Returns:
 
@@ -729,11 +714,11 @@ class Entlet(object):
             return
 
         # Grab all root keys that will be used in the fragment
-        base_fields = list(set([field.split('.')[0] for field in self.er_fields[strategy_name]]))
+        base_fields = list(set([field.split('.')[0] for field in fragment_fields]))
         frag_root_fields = {key: self.values[key] for key in base_fields}
 
-        for fragment in self._produce_fragment_product(frag_root_fields, self.er_fields[strategy_name]):
-            # Make sure entlet_id makes it into every fragment
+        for fragment in self._produce_fragment_product(frag_root_fields, fragment_fields):
+            # The entlet_id *must* be appended to every fragment
             fragment["entlet_id"] = self["entlet_id"]
             yield fragment
 

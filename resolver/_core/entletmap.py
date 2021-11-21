@@ -84,33 +84,6 @@ class EntletMap(MutableMapping):
         self.entlets[entlet.entlet_id] = entlet
         return self
 
-    def add_strategy(self, strategy) -> EntletMap:
-        """
-        Stages a resolution strategy.
-
-        Args:
-            strategy:
-
-        Returns:
-
-        """
-        self._strategies.append(strategy)
-        return self
-
-    def resolve(self, strategies: List[ResolutionStrategy]):
-        """
-        Executes entity resolution.
-
-        Returns:
-
-        """
-        entlet_df = pd.DataFrame(self.entlets.values(), columns=['entlet'])
-
-        for standardization in self._standardizations:
-            entlet_df = entlet_df.apply(standardization.run)
-
-        return entlet_df
-
     def to_dataframe(self) -> pd.DataFrame:
         """
         Converts the entletmap to a dataframe.
@@ -119,15 +92,4 @@ class EntletMap(MutableMapping):
             (pd.DataFrame) A pandas dataframe with one column containing the entlet objects
         """
         return pd.DataFrame(self.entlets.values(), columns=['entlet'])
-
-
-
-class ResolutionPipeline:
-
-    def __init__(self, entletmap: EntletMap):
-        self.entlet_df = entletmap.to_dataframe()
-
-    def _produce_fragments(self, df: pd.DataFrame, fields: List[str]) -> pd.DataFrame(columns=['fragment']):
-
-        pass
 

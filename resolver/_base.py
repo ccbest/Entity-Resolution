@@ -6,11 +6,32 @@ from pandas import DataFrame
 from ._munging import Entlet
 
 
+class Blocker(abc.ABC):
+
+    @abc.abstractmethod
+    def __init__(self, field: str):
+        self.field = field
+
+    @abc.abstractmethod
+    def block(self, df: DataFrame(columns=['fragment'])) -> DataFrame(columns=['entlet1', 'entlet2']):
+        """
+        Executes the blocking logic against a DataFrame
+
+        Args:
+            df (pandas.DataFrame): A pandas dataframe containing one column 'entlet'
+
+        Returns:
+            (pandas.DataFrame) A pandas dataframe containing two columns 'entlet1', 'entlet2'
+        """
+        pass
+
+
 class ColumnarTransform(abc.ABC):
 
+    @abc.abstractmethod
     def __init__(self, field: str, **kwargs):
-        self.field: str
-        self.kwargs: Dict[str, Any]
+        self.field = field
+        self.kwargs: Dict[str, Any] = kwargs
 
     @abc.abstractmethod
     def __hash__(self):
@@ -31,6 +52,7 @@ class ColumnarTransform(abc.ABC):
         Returns:
             (pandas.DataFrame) A pandas dataframe
         """
+        pass
 
 
 class StandardizationTransform(abc.ABC):
@@ -60,6 +82,7 @@ class StandardizationTransform(abc.ABC):
         Returns:
             (Any) The standardized value
         """
+        pass
 
 
 class SimilarityMetric(abc.ABC):
@@ -72,5 +95,20 @@ class SimilarityMetric(abc.ABC):
             transform: ColumnarTransform = None,
             **kwargs
     ):
-        self.field = field
-        self.transform = transform
+        pass
+
+    @abc.abstractmethod
+    def run(self, fragment1: dict, fragment2: dict) -> float:
+        """
+        Abstract method for a similarity metric's run method. The method must
+        accept two fragments and return a float denoting the similarity of the two
+        fragments.
+
+        Args:
+            fragment1:
+            fragment2:
+
+        Returns:
+
+        """
+        pass
