@@ -5,7 +5,6 @@ from copy import deepcopy
 from hashlib import md5
 import itertools
 import json
-import socket
 from typing import Any, Callable, Dict, Generator, List, Tuple, Union
 
 # TODO: Values should have their type stored in the class for checking to avoid collisions
@@ -32,6 +31,8 @@ class Entlet(object):
 
         self.fields = set()
         self.const_values = {}
+
+        self._uid = None
 
     @property
     def required_fields(self) -> List[str]:
@@ -169,7 +170,7 @@ class Entlet(object):
         if 'entlet_id' in self.const_values:
             raise ValueError("An entlet id has already been declared.")
 
-        self.const_values['entlet_id'] = uid
+        self._uid = uid
         return self
 
     def _generate_entlet_id(self):
@@ -180,6 +181,8 @@ class Entlet(object):
         Returns:
             (self)
         """
+        if self._uid:
+            return self._generate_id_from_individual()
 
         # Preferred method, so considered first
         if self.SOURCE_UID_FIELD:
@@ -192,6 +195,19 @@ class Entlet(object):
         raise ValueError("Unable to generate entlet id. No id generation method has been "
                          "specified for the entlet, nor has a custom id been provided.")
 
+    def _generate_id_from_individual(self):
+        """
+        Generates an entlet id from a unique id provided to the entlet instance
+        """
+        uid_values = [self.values.get(field, None) for field in self.UID_FIELDS]
+        if not all(uid_values):
+            missing = [field for field in self.UID_FIELDS if not self[field]]
+            raise ValueError(f"Entlet is missing the following required fields: {missing}")
+
+        uid = ':'.join([*uid_values, self._uid])
+        self.const_values["entlet_id"] = uid
+        return uid
+
     def _generate_id_from_source_field(self):
         """
         Generates a unique id for the entlet assuming a source uid field has been declared.
@@ -201,7 +217,7 @@ class Entlet(object):
         """
         uid_values = [self.values.get(field, None) for field in (*self.UID_FIELDS, self.SOURCE_UID_FIELD)]
         if not all(uid_values):
-            missing = [field for field in self.UID_FIELDS if not self.const_values[field]]
+            missing = [field for field in self.UID_FIELDS if not self[field]]
             raise ValueError(f"Entlet is missing the following required fields: {missing}")
 
         uid = ':'.join(uid_values)

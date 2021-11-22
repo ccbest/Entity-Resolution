@@ -1,25 +1,39 @@
 from __future__ import annotations
-from typing import Collection, Tuple
+from typing import Collection, List, Tuple
 
 
 import pandas as pd
 
-from ._munging.entletmap import EntletMap
-from ._base import StandardizationTransform
+from . import EntletMap, Strategy
+from resolver._base import StandardizationTransform
 
 
 class Pipeline:
 
-    def __init__(self, strategies, standardizers: Collection[StandardizationTransform] = None):
+    def __init__(self, strategies: Collection[Strategy], standardizers: Collection[StandardizationTransform] = None):
 
         self.standardizers = standardizers
-        self.strategies = strategies
+        self.strategies: Collection[Strategy] = strategies
 
     def resolve(self, entletmap: EntletMap):
         entlet_df = entletmap.to_dataframe()
 
         # Standardize stage
         entlet_df = self.standardize_entlets(entlet_df, self.standardizers)
+
+        resolutions = pd.DataFrame(columns=['id1', 'id2'])
+
+        for strategy in self.strategies:
+            fragments = self.fragment(entlet_df, strategy.fragment_fields)
+
+            # Transform columns before blocking
+            for metric in strategy.metrics:
+                fragments = metric.transform(fragments)
+
+            blocked = strategy.blocker.block(fragments)
+
+
+
 
     @staticmethod
     def standardize_entlets(entlet_df: pd.DataFrame, standardizers: Collection[StandardizationTransform]) -> pd.DataFrame:
@@ -38,11 +52,10 @@ class Pipeline:
 
         return entlet_df
 
-    def fragment(self, entlet_df: pd.DataFrame) -> pd.DataFrame:
+    def fragment(self, entlet_df: pd.DataFrame, frag_fields: List[str]) -> pd.DataFrame:
 
-        for strategy in self.strategies:
-            frag_fields = strategy.get_fragment_fields()
-            fragments = entlet_df.applymap(lambda x: list(x.get_fragments(frag_fields)))
+        fragments = entlet_df.applymap(lambda x: list(x.get_fragments(frag_fields)))
+        fragments.unstack().reset_index(drop=True)
 
-            yield fragments.unstack().reset_index(drop=True)
+        return
 

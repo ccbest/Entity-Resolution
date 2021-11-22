@@ -5,8 +5,8 @@ from typing import Dict, List
 
 from definitions import ROOT_DIR
 
-from .._munging.entlet import Entlet
-from .._base import StandardizationTransform
+from resolver import Entlet
+from resolver._base import StandardizationTransform
 
 
 class UsState2Code(StandardizationTransform):

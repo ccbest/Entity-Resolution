@@ -19,6 +19,9 @@ class EntletMap(MutableMapping):
         self._standardizations = []
         self._strategies = []
 
+    def __repr__(self):
+        return f"<resolver.EntletMap {len(self.entlets)} entlets>"
+
     def __setitem__(self, k: str, v: Entlet) -> None:
         """
         Sets the value of k (an entlet id) to v (an entlet)

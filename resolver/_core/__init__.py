@@ -2,9 +2,9 @@
 """Package containing 'core' objects"""
 
 from .entlet import Entlet
-from .entletmap import EntletMap
-from .filter import ScopedFilter
-from .pipeline import Pipeline
+from .filter import Filter
 from .strategy import Strategy
+from .entletmap import EntletMap
+from .pipeline import Pipeline
 
-__all__ = ['Entlet', 'EntletMap', 'ScopedFilter', 'Pipeline', 'Strategy']
+__all__ = ['Entlet', 'EntletMap', 'Filter', 'Pipeline', 'Strategy']
