@@ -20,7 +20,7 @@ class TfIdfTokenizedVector(ColumnarTransform):
 
     @staticmethod
     def _get_new_col_name(field: str):
-        return f"{field}_tfidf_tokenized"
+        return f"{field}_tfidftokenized"
 
     def transform(self, fragments_df: pd.DataFrame, field: str) -> Tuple[str, pd.DataFrame]:
         """
@@ -37,7 +37,7 @@ class TfIdfTokenizedVector(ColumnarTransform):
         self.transformed_field_name = new_col_name
 
         fragments_df[new_col_name] = pd.Series(
-            self.VECTORIZER.fit_transform(fragments_df[field])
+            list(self.VECTORIZER.fit_transform(fragments_df[field]))
         )
         return new_col_name, fragments_df
 

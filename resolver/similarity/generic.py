@@ -32,13 +32,16 @@ class ExactMatch(SimilarityMetric):
         Returns:
 
         """
+        if not self.transforms:
+            return fragments
+
         col_name = self.field
         for transform in self.transforms:
             col_name, fragments = transform.transform(fragments, col_name)
 
         return fragments
 
-    def run(self, record: Dict[str, Any], field: str) -> float:
+    def run(self, record: pd.Series) -> float:
         """
         Compares two values for exact match.
 
@@ -50,6 +53,7 @@ class ExactMatch(SimilarityMetric):
         Returns:
             (float) 1.0 if the values match exactly, 0.0 if not
         """
+        field = self.get_transformed_field_name
         val1, val2 = record[f"f{field}_frag1"], record[f"f{field}_frag2"]
         if val1 == val2:
             return 1.0

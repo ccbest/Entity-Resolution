@@ -1,8 +1,8 @@
 
 from typing import Any, Dict, List, Optional
 
-import numpy as np
 import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
 from scipy.spatial.distance import euclidean
 
 from .._base import ColumnarTransform, SimilarityMetric
@@ -40,25 +40,19 @@ class CosineSimilarity(SimilarityMetric):
 
         return fragments
 
-    def run(self, record: Dict[str, Any], field: str) -> float:
+    def run(self, record: pd.Series) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
             record (Dict[str, Any]): The record containing both fragments
-            field (str): The name of the field to be compared. Because blocking will append
-                         suffixes to the field
 
         Returns:
             (float) the cosine similarity of the vectors
         """
-        val1, val2 = record[f"f{field}_frag1"], record[f"f{field}_frag2"]
-        xnorm = val1.norm(2)
-        ynorm = val2.norm(2)
-        if xnorm and ynorm:
-            return val1.dot(val2) / float(xnorm * ynorm) or 0.0
-
-        return 0
+        field = self.get_transformed_field_name
+        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
+        return cosine_similarity(val1, val2)
 
 
 class EuclideanDistance(SimilarityMetric):

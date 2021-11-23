@@ -46,7 +46,7 @@ from resolver.blocking import SortedNeighborhood
 from resolver.similarity import CosineSimilarity, ExactMatch
 from resolver.transforms import TfIdfTokenizedVector
 
-blocker = SortedNeighborhood("name")
+blocker = SortedNeighborhood("name", window_size=3)
 tfidf = TfIdfTokenizedVector()
 sim = CosineSimilarity("name", transforms=[tfidf])
 sim2 = ExactMatch("location.state")
@@ -66,7 +66,15 @@ entlet_df = emap.to_dataframe()
 entlet_df = self.standardize_entlets(entlet_df, self.standardizers)
 
 strategy = strat
+entlet_df = self.standardize_entlets(entlet_df, self.standardizers)
+fragments = self.fragment(entlet_df, strategy.fragment_fields)
 
+for metric in strategy.metrics:
+    fragments = metric.transform(fragments)
+
+blocked = strategy.blocker.block(fragments)
+
+metric = strategy.metrics[0]
 
 ### STRATEGIES
 from resolver.blocking.text import SortedNeighborhood

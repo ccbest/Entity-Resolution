@@ -32,6 +32,8 @@ class Pipeline:
 
             blocked = strategy.blocker.block(fragments)
 
+            for metric in strategy.metrics:
+                blocked[metric.name] = blocked.apply(metric.run)
 
 
 
@@ -53,9 +55,19 @@ class Pipeline:
         return entlet_df
 
     def fragment(self, entlet_df: pd.DataFrame, frag_fields: List[str]) -> pd.DataFrame:
+        """
+        Convert a dataframe of entlets into a dataframe of fragments. The resulting dataframe's columns
+        reflect the fragment fields, which are dot-notated.
 
+        Args:
+            entlet_df (pd.DataFrame): A dataframe of entlets
+            frag_fields (List[str]): A list of fields to fragment on
+
+        Returns:
+            pd.DataFrame
+        """
         fragments = entlet_df.applymap(lambda x: list(x.get_fragments(frag_fields)))
-        fragments.unstack().reset_index(drop=True)
+        fragments = fragments["entlet"].apply(pd.Series).unstack().reset_index(drop=True).apply(pd.Series)
 
-        return
+        return fragments
 

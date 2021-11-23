@@ -1,7 +1,7 @@
 import abc
 from typing import Any, Dict, Hashable, Optional, Tuple
 
-from pandas import DataFrame
+from pandas import DataFrame, Series
 
 
 class Blocker(abc.ABC):
@@ -126,15 +126,14 @@ class SimilarityMetric(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def run(self, fragment1: dict, fragment2: dict) -> float:
+    def run(self, blocked_fragments: Series) -> float:
         """
         Abstract method for a similarity metric's run method. The method must
         accept two fragments and return a float denoting the similarity of the two
         fragments.
 
         Args:
-            fragment1:
-            fragment2:
+            blocked_fragments:
 
         Returns:
 
