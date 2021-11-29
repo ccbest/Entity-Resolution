@@ -53,4 +53,7 @@ class Strategy:
             blocked[metric.field_name] = blocked.apply(metric.run, axis=1)
 
         fnames = [metric.field_name for metric in self.metrics]
-        blocked = self.scoring_method.score(blocked[fnames]) < self.scoring_method.min
+        blocked["pass"] = blocked.apply(lambda x: self.scoring_method.score(x[fnames]), axis=1)
+
+        # Filter where 'pass' is True and return only the entlet id pairs
+        return blocked[blocked["pass"]][["entlet_id_frag1", "entlet_id_frag2"]]

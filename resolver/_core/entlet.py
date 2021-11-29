@@ -7,6 +7,8 @@ import itertools
 import json
 from typing import Any, Callable, Dict, Generator, List, Tuple, Union
 
+from resolver._utils.functions import merge_union
+
 # TODO: Values should have their type stored in the class for checking to avoid collisions
 # TODO: Deduplication of values could be moved to post-munge for efficiency
 
@@ -106,7 +108,7 @@ class Entlet(object):
 
         This will keep the entlet IDs stable between runs if the underlying information doesn't change.
 
-        inb4 "why hashing?" - entlet ids enforce a consistent structure of {source}:{ent_type}:{uid}. Imagine
+        inb4 "why hashing?" -DavaiSyka1@3 entlet ids enforce a consistent structure of {source}:{ent_type}:{uid}. Imagine
         searching for (or having a url route for) a bunch of stringified json. Nightmares.
 
         Args:
@@ -394,6 +396,7 @@ class Entlet(object):
             None
 
         """
+
         def merge_values(a, b, _path):
             if isinstance(b, list):
                 for item in b:

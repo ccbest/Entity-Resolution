@@ -1,11 +1,15 @@
 from __future__ import annotations
+
+from functools import reduce
+import hashlib
 from typing import Collection, List, Tuple
 
-
+import networkx as nx
 import pandas as pd
 
 from . import EntletMap, Strategy
 from resolver._base import StandardizationTransform
+from resolver._utils.functions import deduplicate_nested_structure, merge_union
 
 
 class Pipeline:
@@ -21,7 +25,8 @@ class Pipeline:
         # Standardize stage
         entlet_df = self.standardize_entlets(entlet_df, self.standardizers)
 
-        resolutions = pd.DataFrame(columns=['id1', 'id2'])
+        resolved_components = nx.Graph()
+        resolved_components.add_nodes_from(entletmap.keys())
 
         for strategy in self.strategies:
             fragments = self.fragment(entlet_df, strategy.fragment_fields)
@@ -31,10 +36,21 @@ class Pipeline:
             for metric in strategy.metrics:
                 fragments = metric.transform(fragments)
 
-            res = strategy.resolve(fragments)
-            pd.concat([resolutions, res])
+            resolutions = strategy.resolve(fragments)
+            resolved_components.add_edges_from(resolutions.to_numpy().tolist())
 
+        entity_map = {}
+        for conn_component in nx.connected_components(resolved_components):
+            entity_id = f"entity:{hashlib.sha1(''.join(conn_component).encode('utf8')).hexdigest()}"
+            entity_map[entity_id] = deduplicate_nested_structure(
+                reduce(
+                    lambda x, y: merge_union(x, y),
+                    [entletmap[entlet_id].dump() for entlet_id in conn_component]
+                )
+            )
+            entity_map[entity_id]['entity_id'] = entity_id
 
+        return entity_map
 
     @staticmethod
     def standardize_entlets(entlet_df: pd.DataFrame, standardizers: Collection[StandardizationTransform]) -> pd.DataFrame:

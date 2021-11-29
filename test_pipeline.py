@@ -18,7 +18,7 @@ entlet.add({
     "name": "Lake County",
     "location": {
         "country": "US",
-        "state": "IL"
+        "state": "Illinois"
     }
 })
 entlet.add({
@@ -68,6 +68,7 @@ from resolver import Strategy
 from resolver.blocking import SortedNeighborhood
 from resolver.similarity import CosineSimilarity, ExactMatch
 from resolver.transforms import TfIdfTokenizedVector
+from resolver.scoring import VectorMagnitude
 
 blocker = SortedNeighborhood("name", window_size=3)
 tfidf = TfIdfTokenizedVector()
@@ -76,13 +77,14 @@ sim2 = ExactMatch("location.state")
 
 strategy = Strategy(
     blocker=blocker,
-    metrics=[sim, sim2]
+    metrics=[sim, sim2],
+    scoring_method=VectorMagnitude(min=1.0)
 )
 
 
 pipeline = Pipeline([strategy], [state_std])
-self = pipeline
 
+self = pipeline
 entlet_df = emap.to_dataframe()
 
 # Standardize stage
@@ -99,6 +101,7 @@ blocked = strategy.blocker.block(fragments)
 self = strategy
 for metric in self.metrics:
     blocked[metric.field_name] = blocked.apply(metric.run, axis=1)
+
 
 
 

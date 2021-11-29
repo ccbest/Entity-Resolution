@@ -29,9 +29,9 @@ class VectorMagnitude:
         self.min = min
         self.kwargs = kwargs
 
-    def score(self, blocked_df: pd.DataFrame, field_names: List[str]):
+    def score(self, row: pd.Series):
 
-        filtered = np.linalg.norm(np.array(blocked_df[field_names])) > self.min
+        filtered = np.linalg.norm(np.array(row)) > self.min
         return filtered
 
 
