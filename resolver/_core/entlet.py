@@ -26,7 +26,6 @@ class Entlet(object):
     SOURCE_UID_FIELD = None
 
     def __init__(self):
-        self.products = ()
         self.values = defaultdict(list)
 
         self.fields = set()
@@ -389,7 +388,7 @@ class Entlet(object):
         Functionally the same as .add() except doesn't check for constant fields
 
         Args:
-            obj: keys and values
+            entlet: keys and values
 
         Returns:
             None

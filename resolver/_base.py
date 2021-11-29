@@ -104,7 +104,16 @@ class SimilarityMetric(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def get_transformed_field_name(self):
+    def field_name(self):
+        """
+        Provides the field name that should be compared using the similarity metric. If transforms
+        have been executed against the field, they will have updated the field name.
+        """
+        pass
+
+    @property
+    @abc.abstractmethod
+    def transformed_field_name(self):
         """
         Provides the field name that should be compared using the similarity metric. If transforms
         have been executed against the field, they will have updated the field name.

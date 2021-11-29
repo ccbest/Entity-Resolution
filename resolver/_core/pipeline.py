@@ -27,13 +27,12 @@ class Pipeline:
             fragments = self.fragment(entlet_df, strategy.fragment_fields)
 
             # Transform columns before blocking
+            # todo: move before fragmentation - fragment field names will be altered
             for metric in strategy.metrics:
                 fragments = metric.transform(fragments)
 
-            blocked = strategy.blocker.block(fragments)
-
-            for metric in strategy.metrics:
-                blocked[metric.name] = blocked.apply(metric.run)
+            res = strategy.resolve(fragments)
+            pd.concat([resolutions, res])
 
 
 
@@ -54,20 +53,20 @@ class Pipeline:
 
         return entlet_df
 
-    def fragment(self, entlet_df: pd.DataFrame, frag_fields: List[str]) -> pd.DataFrame:
+    def fragment(self, entlet_df: pd.DataFrame, fragment_fields: List[str]) -> pd.DataFrame:
         """
         Convert a dataframe of entlets into a dataframe of fragments. The resulting dataframe's columns
         reflect the fragment fields, which are dot-notated.
 
         Args:
             entlet_df (pd.DataFrame): A dataframe of entlets
-            frag_fields (List[str]): A list of fields to fragment on
+            fragment_fields (List[str]): A list of fields to fragment on
 
         Returns:
             pd.DataFrame
         """
-        fragments = entlet_df.applymap(lambda x: list(x.get_fragments(frag_fields)))
-        fragments = fragments["entlet"].apply(pd.Series).unstack().reset_index(drop=True).apply(pd.Series)
+        fragments = entlet_df.applymap(lambda x: list(x.get_fragments(fragment_fields)))
+        fragments = fragments["entlet"].apply(pd.Series).stack().reset_index(drop=True).apply(pd.Series)
 
         return fragments
 

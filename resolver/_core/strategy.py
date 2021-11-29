@@ -2,6 +2,8 @@
 
 from typing import Collection, Optional
 
+import pandas as pd
+
 from resolver._base import Blocker, ScoringReducer, SimilarityMetric
 from . import Filter
 
@@ -19,6 +21,7 @@ class Strategy:
         self.blocker = blocker
         self.metrics: Collection[SimilarityMetric] = metrics
         self.scoring_method = scoring_method
+
         self.partitions = partitions
         self.filters = filters
 
@@ -34,3 +37,20 @@ class Strategy:
         if self.partitions:
             fields.add(self.partitions)
         return fields
+
+    def resolve(self, fragments: pd.DataFrame) -> pd.DataFrame:
+        """
+
+        Args:
+            fragments:
+
+        Returns:
+
+        """
+        blocked = self.blocker.block(fragments)
+
+        for metric in self.metrics:
+            blocked[metric.field_name] = blocked.apply(metric.run, axis=1)
+
+        fnames = [metric.field_name for metric in self.metrics]
+        blocked = self.scoring_method.score(blocked[fnames]) < self.scoring_method.min

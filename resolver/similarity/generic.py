@@ -13,7 +13,11 @@ class ExactMatch(SimilarityMetric):
         self.transforms: Optional[List[ColumnarTransform]] = transforms
 
     @property
-    def get_transformed_field_name(self):
+    def field_name(self):
+        return f"{self.transformed_field_name}_ExactMatch"
+
+    @property
+    def transformed_field_name(self):
         """
         Provides the field name that should be compared using the similarity metric. If transforms
         have been executed against the field, they will have updated the field name.
@@ -53,8 +57,8 @@ class ExactMatch(SimilarityMetric):
         Returns:
             (float) 1.0 if the values match exactly, 0.0 if not
         """
-        field = self.get_transformed_field_name
-        val1, val2 = record[f"f{field}_frag1"], record[f"f{field}_frag2"]
+        field = self.transformed_field_name
+        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
         if val1 == val2:
             return 1.0
 

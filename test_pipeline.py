@@ -10,28 +10,51 @@ from resolver.standardizers import UsState2Code
 # entlets = munge(file)
 
 Entlet.define_source_uid_field("countyFIPS")
-test_entlet = Entlet()
-test_entlet.add({
+entlet = Entlet()
+entlet.add({
     "ent_type": "county",
     "data_source": "test",
-    "countyFIPS": "12345782391",
+    "countyFIPS": "12345",
     "name": "Lake County",
     "location": {
         "country": "US",
         "state": "IL"
     }
 })
-test_entlet.add({
+entlet.add({
     "location": {
         "country": "UK",
         "state": "Not alabama"
     }
 })
-test_entlet.add({
-    "name": "Seth"
-})
+emap = EntletMap([entlet])
 
-emap = EntletMap([test_entlet])
+entlet = Entlet()
+entlet.add({
+    "ent_type": "county",
+    "data_source": "test",
+    "countyFIPS": "23456",
+    "name": "Lake",
+    "location": {
+        "country": "US",
+        "state": "IL"
+    }
+})
+emap.add(entlet)
+
+entlet = Entlet()
+entlet.add({
+    "ent_type": "county",
+    "data_source": "test",
+    "countyFIPS": "34567",
+    "name": "DuPage County",
+    "location": {
+        "country": "US",
+        "state": "IL"
+    }
+})
+emap.add(entlet)
+
 state_std = UsState2Code(
     "location.state",
     filters=[{
@@ -51,13 +74,13 @@ tfidf = TfIdfTokenizedVector()
 sim = CosineSimilarity("name", transforms=[tfidf])
 sim2 = ExactMatch("location.state")
 
-strat = Strategy(
+strategy = Strategy(
     blocker=blocker,
     metrics=[sim, sim2]
 )
 
 
-pipeline = Pipeline([strat], [state_std])
+pipeline = Pipeline([strategy], [state_std])
 self = pipeline
 
 entlet_df = emap.to_dataframe()
@@ -65,7 +88,6 @@ entlet_df = emap.to_dataframe()
 # Standardize stage
 entlet_df = self.standardize_entlets(entlet_df, self.standardizers)
 
-strategy = strat
 entlet_df = self.standardize_entlets(entlet_df, self.standardizers)
 fragments = self.fragment(entlet_df, strategy.fragment_fields)
 
@@ -74,9 +96,10 @@ for metric in strategy.metrics:
 
 blocked = strategy.blocker.block(fragments)
 
-metric = strategy.metrics[0]
+self = strategy
+for metric in self.metrics:
+    blocked[metric.field_name] = blocked.apply(metric.run, axis=1)
 
-### STRATEGIES
-from resolver.blocking.text import SortedNeighborhood
-from resolver.similarity.vectors import CosineSimilarity
+
+
 

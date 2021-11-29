@@ -1,5 +1,8 @@
 
+from typing import List
+
 import numpy as np
+import pandas as pd
 
 """
 
@@ -18,10 +21,18 @@ def isolate_entlet_ids(record):
     entlet2 = record[1]["entlet_id"]
     return entlet1, entlet2, record[2:]
 
-def vector_magnitude(record):
-    ent1, ent2, scores = isolate_entlet_ids(record)
-    vector = np.array(*[item[1] for item in record[2:]])
-    return (ent1, ent2, np.linalg.norm(vector))
+
+
+class VectorMagnitude:
+
+    def __init__(self, min, **kwargs):
+        self.min = min
+        self.kwargs = kwargs
+
+    def score(self, blocked_df: pd.DataFrame, field_names: List[str]):
+
+        filtered = np.linalg.norm(np.array(blocked_df[field_names])) > self.min
+        return filtered
 
 
 def add(record):
