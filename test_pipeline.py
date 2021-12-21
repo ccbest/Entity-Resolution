@@ -3,8 +3,6 @@ from pathlib import Path
 import operator
 
 from resolver import Entlet, EntletMap, Pipeline
-from resolver.standardizers import UsState2Code
-
 
 # file = Path("/Users/carlbest/Desktop/malak/covid_confirmed_usafacts.csv")
 # entlets = munge(file)
@@ -55,6 +53,15 @@ entlet.add({
 })
 emap.add(entlet)
 
+
+from resolver import Strategy
+from resolver.blocking import SortedNeighborhood
+from resolver.scoring import VectorMagnitude
+from resolver.similarity import CosineSimilarity, ExactMatch
+from resolver.standardizers import UsState2Code
+from resolver.transforms import TfIdfTokenizedVector
+
+
 state_std = UsState2Code(
     "location.state",
     filters=[{
@@ -63,12 +70,6 @@ state_std = UsState2Code(
             "value": "US"
     }]
 )
-
-from resolver import Strategy
-from resolver.blocking import SortedNeighborhood
-from resolver.similarity import CosineSimilarity, ExactMatch
-from resolver.transforms import TfIdfTokenizedVector
-from resolver.scoring import VectorMagnitude
 
 blocker = SortedNeighborhood("name", window_size=3)
 tfidf = TfIdfTokenizedVector()
@@ -83,24 +84,30 @@ strategy = Strategy(
 
 
 pipeline = Pipeline([strategy], [state_std])
+pipeline.resolve(emap)
 
-self = pipeline
-entlet_df = emap.to_dataframe()
 
-# Standardize stage
-entlet_df = self.standardize_entlets(entlet_df, self.standardizers)
 
-entlet_df = self.standardize_entlets(entlet_df, self.standardizers)
-fragments = self.fragment(entlet_df, strategy.fragment_fields)
 
-for metric in strategy.metrics:
-    fragments = metric.transform(fragments)
 
-blocked = strategy.blocker.block(fragments)
 
-self = strategy
-for metric in self.metrics:
-    blocked[metric.field_name] = blocked.apply(metric.run, axis=1)
+# self = pipeline
+# entlet_df = emap.to_dataframe()
+
+# # Standardize stage
+# entlet_df = self.standardize_entlets(entlet_df, self.standardizers)
+#
+# entlet_df = self.standardize_entlets(entlet_df, self.standardizers)
+# fragments = self.fragment(entlet_df, strategy.fragment_fields)
+#
+# for metric in strategy.metrics:
+#     fragments = metric.transform(fragments)
+#
+# blocked = strategy.blocker.block(fragments)
+#
+# self = strategy
+# for metric in self.metrics:
+#     blocked[metric.field_name] = blocked.apply(metric.run, axis=1)
 
 
 

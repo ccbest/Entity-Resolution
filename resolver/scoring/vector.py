@@ -1,8 +1,9 @@
 
-from typing import List
 
 import numpy as np
 import pandas as pd
+
+from resolver._base import ScoringReducer
 
 """
 
@@ -16,14 +17,10 @@ following element is one score of potentially many.
 
 """
 
-def isolate_entlet_ids(record):
-    entlet1 = record[0]["entlet_id"]
-    entlet2 = record[1]["entlet_id"]
-    return entlet1, entlet2, record[2:]
 
 
 
-class VectorMagnitude:
+class VectorMagnitude(ScoringReducer):
 
     def __init__(self, min, **kwargs):
         self.min = min
