@@ -384,7 +384,6 @@ class Entlet(object):
 
                 else:
                     self.values[key].append(obj[key])
-
             else:
                 merge_values(self.values[key], obj[key], key)
 
