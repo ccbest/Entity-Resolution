@@ -1,1 +1,7 @@
+# Folders
 /cache/
+/__pycache__
+/.ipynb_checkpoints
+
+# File types
+*.pyc
