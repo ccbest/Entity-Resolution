@@ -59,9 +59,6 @@ class Entlet(object):
         if key in self.const_values:
             return self.const_values[key]
 
-        if key in self.values:
-            return self.values[key]
-
         return self.get_recursive(self.values, key.split('.'))
 
     def __repr__(self):
