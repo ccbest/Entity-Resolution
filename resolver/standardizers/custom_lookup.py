@@ -1,12 +1,10 @@
 """Standardizations that rely on resources to provide a value map"""
 import csv
-from pathlib import Path
 from typing import Dict, List
-
-from definitions import ROOT_DIR
 
 from resolver import Entlet
 from resolver._base import StandardizationTransform
+from . import RESOURCES
 
 
 class UsState2Code(StandardizationTransform):
@@ -22,11 +20,9 @@ class UsState2Code(StandardizationTransform):
     """
 
     # TODO: packable resources
-    RESOURCE_PATH = Path(ROOT_DIR, "resolver", "standardizers", "resources", "us_state_two_code.csv")
-
     RESOURCE = {
         line[0]: line[1] for line in csv.reader(
-            open(RESOURCE_PATH, 'r', encoding='utf-8-sig')
+            open(RESOURCES / "us_state_two_code.csv", 'r', encoding='utf-8-sig')
         )
     }
 
