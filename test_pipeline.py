@@ -75,14 +75,20 @@ tfidf = TfIdfTokenizedVector()
 sim = CosineSimilarity("name", transforms=[tfidf])
 sim2 = ExactMatch("location.state")
 
+score_method = VectorMagnitude(min=1.0)
+
 strategy = Strategy(
     blocker=blocker,
     metrics=[sim, sim2],
-    scoring_method=VectorMagnitude(min=1.0)
+    scoring_method=
 )
 
 
 pipeline = Pipeline([strategy], [state_std])
+
+ent_map = pipeline.resolve(emap)
+
+
 
 self = pipeline
 entlet_df = emap.to_dataframe()
