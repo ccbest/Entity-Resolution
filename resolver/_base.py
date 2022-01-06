@@ -72,7 +72,7 @@ class ScoringReducer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def run(self, fragment1: dict, fragment2: dict) -> float:
+    def score(self, row: Series) -> float:
         """
         Abstract method for a similarity metric's run method. The method must
         accept two fragments and return a float denoting the similarity of the two
