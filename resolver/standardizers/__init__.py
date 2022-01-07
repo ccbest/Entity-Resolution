@@ -1,34 +1,9 @@
 
-import abc
-from typing import Any, Dict
+import os
+from pathlib import Path
 
-from utils.entlet import Entlet
+RESOURCES = Path(os.path.dirname(os.path.abspath(__file__))) / 'resources'
 
+from resolver.standardizers.custom_lookup import UsState2Code
 
-class StandardizationTransform(abc.ABC):
-
-    @abc.abstractmethod
-    def run(self, entlet: Entlet) -> Entlet:
-        """
-        Applies standardization logic against a given entlet.
-
-        Args:
-            entlet (Entlet): an instance of an Entlet. See utils.entlet for more information.
-
-        Returns:
-
-        """
-        pass
-
-    @abc.abstractmethod
-    def standardize(self, value: Any) -> Any:
-        """
-        The method for actually applying standardization logic against a given value.
-        Should return the standardized value.
-
-        Args:
-            value (Any): The value to be standardized.
-
-        Returns:
-            (Any) The standardized value
-        """
+__all__ = ['UsState2Code']
