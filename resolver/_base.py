@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Dict, Hashable, Optional, Tuple
+from typing import Any, Dict, Hashable, List, Optional, Tuple
 
 from pandas import DataFrame, Series
 
@@ -95,11 +95,11 @@ class SimilarityMetric(abc.ABC):
     def __init__(
             self,
             field: str,
-            transforms: ColumnarTransform = None,
+            transforms: Optional[List[ColumnarTransform]] = None,
             **kwargs
     ):
         self.field = field
-        self.transforms = transforms
+        self.transforms = transforms or []
         self.kwargs = kwargs
 
     @property
@@ -112,15 +112,16 @@ class SimilarityMetric(abc.ABC):
         pass
 
     @property
-    @abc.abstractmethod
     def transformed_field_name(self):
         """
         Provides the field name that should be compared using the similarity metric. If transforms
         have been executed against the field, they will have updated the field name.
         """
-        pass
+        if self.transforms:
+            return self.transforms[-1].transformed_field_name
 
-    @abc.abstractmethod
+        return self.field
+
     def transform(self, fragments: DataFrame):
         """
         Run all specified transforms in sequence. The transforms will append columns to the dataframe,
@@ -132,7 +133,11 @@ class SimilarityMetric(abc.ABC):
         Returns:
             (DataFrame): The same dataframe, with columns added from each transform
         """
-        pass
+        col_name = self.field
+        for transform in self.transforms:
+            col_name, fragments = transform.transform(fragments, col_name)
+
+        return fragments
 
     @abc.abstractmethod
     def run(self, blocked_fragments: Series) -> float:

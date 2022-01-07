@@ -128,6 +128,8 @@ def deduplicate_nested_structure(obj: Any) -> Any:
     Returns:
 
     """
+    if not obj:
+        return obj
 
     if isinstance(obj, Generator):
         obj = list(obj)

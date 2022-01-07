@@ -71,7 +71,14 @@ class Entlet(object):
 
     def __contains__(self, o):
         """Boolean check if key exists in .values"""
-        return self.const_values.__contains__(o) or self.get_recursive(self.values, o.split('.'))
+        if self.const_values.__contains__(o):
+            return True
+
+        try:
+            self.get_recursive(self.values, o.split('.'))
+            return True
+        except KeyError:
+            return False
 
     def get(self, key: str, default: Any = None) -> Any:
         """
