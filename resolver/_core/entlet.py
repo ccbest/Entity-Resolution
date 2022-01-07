@@ -59,10 +59,7 @@ class Entlet(object):
         if key in self.const_values:
             return self.const_values[key]
 
-        if key in self.values:
-            return self.values[key]
-
-        raise KeyError(f"Entlet does not contain key {key}")
+        return self.get_recursive(self.values, key.split('.'))
 
     def __repr__(self):
         """ So we can easily see in the debugger """

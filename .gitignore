@@ -1,2 +1,8 @@
-/cache/
-*.ipynb_checkpoints/*
+# Folders
+*cache/
+*__pycache__/
+*.ipynb_checkpoints/
+*.vscode/
+
+# File types
+*.pyc
