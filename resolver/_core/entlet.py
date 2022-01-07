@@ -59,10 +59,7 @@ class Entlet(object):
         if key in self.const_values:
             return self.const_values[key]
 
-        if key in self.values:
-            return self.values[key]
-
-        raise KeyError(f"Entlet does not contain key {key}")
+        return self.get_recursive(self.values, key.split('.'))
 
     def __repr__(self):
         """ So we can easily see in the debugger """
@@ -71,7 +68,14 @@ class Entlet(object):
 
     def __contains__(self, o):
         """Boolean check if key exists in .values"""
-        return self.const_values.__contains__(o) or self.get_recursive(self.values, o.split('.'))
+        if self.const_values.__contains__(o):
+            return True
+
+        try:
+            self.get_recursive(self.values, o.split('.'))
+            return True
+        except KeyError:
+            return False
 
     def get(self, key: str, default: Any = None) -> Any:
         """
