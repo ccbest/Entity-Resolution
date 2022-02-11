@@ -1,36 +1,90 @@
-from pandas import DataFrame
 
-from resolver._base import Blocker
+from functools import reduce
+from typing import Dict, List, Set
+
+from nltk.tokenize import word_tokenize
+from nltk.tokenize.legality_principle import LegalitySyllableTokenizer
+import pandas as pd
+
+from resolver import Entlet
+from resolver._base import ColumnarTransform
+from resolver.blocking import ReverseIndexBlocker, REVERSE_INDEX
+from resolver.blocking.fingerprinter import FingerPrinter
+
+
+class QGramBlocker(FingerPrinter, ReverseIndexBlocker):
+
+    """
+    Blocks string values based on Q-Grams (n-length character subsets of the strings).
+
+    Accepts fields with the following datatypes:
+      - string
+
+    """
+
+    ACCEPTS = [str]
+
+    def __init__(self, fields: List[str], q: int, transforms: List[ColumnarTransform], threshold: float = None):
+        super().__init__(fields, self.fingerprint_string)
+
+        self.q = q
+        self.transforms = transforms
+        self.threshold = threshold
+
+        # { field_name : { qgram : [ entlet_ids ] } }
+        self.reverse_index: Dict[str, Dict[str, List[str]]] = {}
+
+    def fingerprint(self, entlet: Entlet) -> Dict[str, Dict[str, List[str]]]:
+        """
+        Creates the fingerprint for a given entlet on a per-field basis.
+
+        Args:
+            entlet (Entlet): an Entlet
+
+        Returns:
+            { <field name> : { bucket : [ entlet_id ] } }
+        """
+        return {
+            field: {
+                bucket: [entlet.entlet_id] for value in entlet.get(field, [])
+                for bucket in self.fingerprint_string(value)
+            }
+            for field in self.fields
+        }
+
+    def fingerprint_string(self, value: str) -> Set[str]:
+        return {value[i:i+self.q] for i in range(len(value) - self.q + 1)}
+
+
+class SyllableBlocker(FingerPrinter, ReverseIndexBlocker):
+
+    """
+    Blocks string values based on expressed syllables in the text (n-length character subsets of the strings).
+
+    Accepts fields with the following datatypes:
+      - string
+
+    """
+
+    ACCEPTS = [str]
+
+    def __init__(self, fields: List[str], transforms: List[ColumnarTransform], threshold: float = None):
+        super().__init__(fields, self.fingerprint_string)
+
+        from nltk.corpus import words
+        self.tokenizer = LegalitySyllableTokenizer(words.words())
+
+        self.fields = fields
+        self.transforms = transforms
+        self.threshold = threshold
+
+        # { field_name : { qgram : [ entlet_ids ] } }
+        self.reverse_index: Dict[str, Dict[str, List[str]]] = {}
+
+    def fingerprint_string(self, value: str) -> Set[str]:
+        return {
+            token for word in word_tokenize(value) for token in self.tokenizer.tokenize(word)
+        }
 
 
 
-
-
-# def alphabetical_neighborhood(df, column_name, **kwargs):
-#
-#     window_size = kwargs.get("window", 10)
-#
-#     # Sort the rdd by the partition+column specified, then drop the key
-#     # Transforms to [ Row() ]
-#     df_sorted = df.orderBy(column_name)\
-#         .withColumn("index", f.dense_rank().over(Window.partitionBy("partition_no").orderBy(column_name)))
-#
-#     # Add an incrementing index, then move it from the key position into the record
-#     # Transforms to [ Row() ]
-#     indexed = df_sorted.rdd\
-#         .map(lambda x: Row(**{"partition_no": x["partition_no"], "data": Row(**x.asDict())}))\
-#         .toDF()
-#
-#     # Permute rows against each other, but filter where outside window
-#     # Transforms to [ partition_no , Row() , Row() ]
-#     mapped = indexed\
-#         .join(indexed.alias("b").withColumnRenamed("data", "r_data"), "partition_no")\
-#         .where(f'data["index"] - r_data["index"] <= {window_size} and '
-#                'data["partition_no"] == r_data["partition_no"] and '
-#                'data["entlet_id"] != r_data["entlet_id"]')\
-#         .distinct()
-#
-#     # Drop the index
-#     # transforms to [ Row() , Row() ]
-#     _ = mapped.rdd.map(lambda x: (x["data"], x["r_data"])).repartition(200)
-#     return _
