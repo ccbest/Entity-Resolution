@@ -5,7 +5,7 @@ from copy import deepcopy
 from hashlib import md5
 import itertools
 import json
-from typing import Any, Callable, Dict, Generator, List, Tuple, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
 
 from resolver._utils.functions import merge_union
 
@@ -27,13 +27,16 @@ class Entlet(object):
     CUSTOM_UID_FIELDS = None
     SOURCE_UID_FIELD = None
 
-    def __init__(self):
+    def __init__(self, initial: Optional[Dict[str, Any]] = None):
         self.values = defaultdict(list)
 
         self.fields = set()
         self.const_values = {}
 
         self._uid = None
+
+        if initial is not None:
+            self.add(initial)
 
     @property
     def required_fields(self) -> List[str]:
@@ -697,7 +700,7 @@ class Entlet(object):
                 # ":" in unique id will make json.loads error
                 try:
                     val = json.loads(value)
-                except json.decoder.JSONDecodeError:
+                except (json.decoder.JSONDecodeError, TypeError):
                     val = value
 
                 processed_frag.update({key: val})
