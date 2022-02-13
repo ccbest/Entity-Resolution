@@ -54,5 +54,3 @@ class EuclideanDistance(SimilarityMetric):
         field = self.transformed_field_name
         val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
         return euclidean(val1, val2)
-
-

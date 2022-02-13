@@ -697,7 +697,7 @@ class Entlet(object):
                 # ":" in unique id will make json.loads error
                 try:
                     val = json.loads(value)
-                except json.decoder.JSONDecodeError:
+                except (json.decoder.JSONDecodeError, TypeError):
                     val = value
 
                 processed_frag.update({key: val})
