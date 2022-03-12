@@ -4,7 +4,8 @@ from typing import Collection, Optional
 
 import pandas as pd
 
-from resolver._base import Blocker, ScoringReducer, SimilarityMetric
+from resolver._base import ScoringReducer, SimilarityMetric
+from resolver.blocking._base import Blocker
 from . import Filter
 
 

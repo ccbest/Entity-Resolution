@@ -4,28 +4,6 @@ from typing import Any, Dict, Hashable, List, Optional, Tuple
 from pandas import DataFrame, Series
 
 
-class Blocker(abc.ABC):
-
-    @abc.abstractmethod
-    def __init__(self, field: str):
-        self.field = field
-
-    @abc.abstractmethod
-    def block(self, fragments_df: DataFrame) -> DataFrame:
-        """
-        Executes the blocking logic against a DataFrame
-
-        Args:
-            fragments_df (pandas.DataFrame): A pandas Dataframe where each record is a fragment
-
-        Returns:
-            (pandas.DataFrame) A dataframe whose records have been 'blocked'. Records from the 'left'
-            fragment will be suffixed by '_frag1', and records from the 'right' fragment will be
-            suffixed with '_frag2'.
-        """
-        pass
-
-
 class ColumnarTransform(abc.ABC):
 
     @abc.abstractmethod
