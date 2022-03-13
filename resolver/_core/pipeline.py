@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from functools import reduce
 import hashlib
-from typing import Collection, List, Tuple
+from typing import Collection, List
 
 import networkx as nx
 import pandas as pd
 
-from . import EntletMap, Strategy
+from resolver import EntletMap, Strategy
 from resolver._base import StandardizationTransform
 from resolver._utils.functions import deduplicate_nested_structure, merge_union
 
@@ -15,7 +15,6 @@ from resolver._utils.functions import deduplicate_nested_structure, merge_union
 class Pipeline:
 
     def __init__(self, strategies: Collection[Strategy], standardizers: Collection[StandardizationTransform] = None):
-
         self.standardizers = standardizers
         self.strategies: Collection[Strategy] = strategies
 
@@ -29,15 +28,7 @@ class Pipeline:
         resolved_components.add_nodes_from(entletmap.keys())
 
         for strategy in self.strategies:
-            fragments = self.fragment(entlet_df, strategy.fragment_fields)
-
-            # Transform columns before blocking
-            # todo: move before fragmentation - fragment field names will be altered
-            for metric in strategy.metrics:
-                fragments = metric.transform(fragments)
-
-            resolutions = strategy.resolve(fragments)
-            resolved_components.add_edges_from(resolutions.to_numpy().tolist())
+            resolved_components.add_edges_from(strategy.resolve(entletmap, entlet_df))
 
         entity_map = {}
         for conn_component in nx.connected_components(resolved_components):

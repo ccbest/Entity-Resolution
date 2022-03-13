@@ -4,6 +4,7 @@ from typing import Collection, Optional
 
 import pandas as pd
 
+from resolver import EntletMap
 from resolver._base import ScoringReducer, SimilarityMetric
 from resolver.blocking._base import Blocker
 from . import Filter
@@ -26,35 +27,17 @@ class Strategy:
         self.partitions = partitions
         self.filters = filters
 
-    @property
-    def fragment_fields(self):
-        """
-        The list of all the entlet's fields that are required to be on the fragment for this strategy.
-        Note that these are the fields *pre-transform*.
-
-        """
-        fields = {self.blocker.field}
-        fields.update([metric.field for metric in self.metrics])
-        if self.partitions:
-            fields.add(self.partitions)
-        return fields
-
-    def resolve(self, fragments: pd.DataFrame) -> pd.DataFrame:
+    def resolve(self, entletmap: EntletMap, entlet_df: pd.DataFrame) -> pd.DataFrame:
         """
 
         Args:
-            fragments:
+            entletmap: The entletmap
+            entlet_df:
 
         Returns:
 
         """
-        blocked = self.blocker.block(fragments)
-
-        for metric in self.metrics:
-            blocked[metric.field_name] = blocked.apply(metric.run, axis=1)
-
-        fnames = [metric.field_name for metric in self.metrics]
-        blocked["pass"] = blocked.apply(lambda x: self.scoring_method.score(x[fnames]), axis=1)
-
-        # Filter where 'pass' is True and return only the entlet id pairs
-        return blocked[blocked["pass"]][["entlet_id_frag1", "entlet_id_frag2"]]
+        for candidate_pair in self.blocker.block(entlet_df):
+            scores = [metric.run(*[entletmap.get(x) for x in candidate_pair]) for metric in self.metrics]
+            if self.scoring_method(*scores):
+                yield candidate_pair

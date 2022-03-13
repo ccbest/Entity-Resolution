@@ -5,19 +5,18 @@ import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.spatial.distance import euclidean
 
-from .._base import ColumnarTransform, SimilarityMetric
+from resolver._base import ColumnarTransform
+from resolver.similarity._base import SimilarityMetric
+from resolver import Entlet
 
 
 class CosineSimilarity(SimilarityMetric):
 
     def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+        super().__init__(transforms, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_CosineSimilarity"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, entlet1: Entlet, entlet2: Entlet) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
@@ -27,21 +26,20 @@ class CosineSimilarity(SimilarityMetric):
         Returns:
             (float) the cosine similarity of the vectors
         """
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return cosine_similarity(val1, val2)[0][0]
+        return min(
+            cosine_similarity(x, y)[0][0]
+            for x in entlet1.get(self.field, [])
+            for y in entlet2.get(self.field, [])
+        )
 
 
 class EuclideanDistance(SimilarityMetric):
 
     def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+        super().__init__(transforms, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_EuclideanDistance"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, entlet1: Entlet, entlet2: Entlet) -> float:
         """
         Computes the euclidean distance between 2 vectors.
 
@@ -51,6 +49,9 @@ class EuclideanDistance(SimilarityMetric):
         Returns:
             (float) the cosine similarity of the vectors
         """
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return euclidean(val1, val2)
+
+        return min(
+            euclidean(x, y)
+            for x in entlet1.get(self.field, [])
+            for y in entlet2.get(self.field, [])
+        )

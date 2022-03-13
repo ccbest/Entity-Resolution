@@ -1,113 +1,113 @@
 
-from typing import Dict, List, Optional
+from typing import List, Optional
 
-import pandas as pd
-
-from resolver._base import ColumnarTransform, SimilarityMetric
+from resolver import Entlet
+from resolver._base import ColumnarTransform
+from resolver.similarity._base import SimilarityMetric
 
 
 class LevenshteinDistance(SimilarityMetric):
 
     def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+        super().__init__(transforms, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_LevenshteinDistance"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, entlet1: Entlet, entlet2: Entlet) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            record (Dict[str, Any]): The record containing both fragments
+            entlet1
+            entlet2
 
         Returns:
             (float) the cosine similarity of the vectors
         """
         from Levenshtein import distance
 
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return distance(val1, val2)
+        return min(
+            distance(x, y)
+            for x in entlet1.get(self.field, [])
+            for y in entlet2.get(self.field, [])
+        )
 
 
 class LevenshteinRatio(SimilarityMetric):
 
     def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+        super().__init__(transforms, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_LevenshteinRatio"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, entlet1: Entlet, entlet2: Entlet) -> float:
         """
-        Computes the cosine similarity of 2 vectors.
+        Computes the Levenshtein ratio of two strings
 
         Args:
-            record (Dict[str, Any]): The record containing both fragments
+            entlet1
+            entlet2
 
         Returns:
-            (float) the cosine similarity of the vectors
+            (float)
         """
         from Levenshtein import ratio
 
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return ratio(val1, val2)
+        return max(
+            ratio(x, y)
+            for x in entlet1.get(self.field, [])
+            for y in entlet2.get(self.field, [])
+        )
 
 
 class HammingDistance(SimilarityMetric):
 
     def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+        super().__init__(transforms, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_HammingDistance"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, entlet1: Entlet, entlet2: Entlet) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            record (Dict[str, Any]): The record containing both fragments
+            entlet1
+            entlet2
 
         Returns:
             (float) the cosine similarity of the vectors
         """
         from Levenshtein import hamming
 
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return hamming(val1, val2)
+        return min(
+            hamming(x, y)
+            for x in entlet1.get(self.field, [])
+            for y in entlet2.get(self.field, [])
+        )
 
 
 class JaroDistance(SimilarityMetric):
 
     def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+        super().__init__(transforms, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_JaroDistance"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, entlet1: Entlet, entlet2: Entlet) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            record (Dict[str, Any]): The record containing both fragments
+            entlet1
+            entlet2
 
         Returns:
             (float) the cosine similarity of the vectors
         """
         from Levenshtein import jaro
 
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return jaro(val1, val2)
+        return min(
+            jaro(x, y)
+            for x in entlet1.get(self.field, [])
+            for y in entlet2.get(self.field, [])
+        )
 
 
 class JaroWinklerDistance(SimilarityMetric):
@@ -121,25 +121,25 @@ class JaroWinklerDistance(SimilarityMetric):
     """
 
     def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+        super().__init__(transforms, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_JaroWinklerDistance"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, entlet1: Entlet, entlet2: Entlet) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            record (Dict[str, Any]): The record containing both fragments
+            entlet1
+            entlet2
 
         Returns:
             (float) the cosine similarity of the vectors
         """
         from Levenshtein import jaro_winkler
 
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return jaro_winkler(val1, val2)
+        return min(
+            jaro_winkler(x, y)
+            for x in entlet1.get(self.field, [])
+            for y in entlet2.get(self.field, [])
+        )
 
