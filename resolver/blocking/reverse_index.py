@@ -6,14 +6,14 @@ from typing import Callable, Dict, Generator, List, Optional, Tuple, Set
 import pandas as pd
 
 from resolver import Entlet
-from resolver._base import ColumnarTransform
+from resolver._base import Blocker, ColumnarTransform
 from resolver._functions import merge_union
 
 
 _INDEX = Dict[str, Dict[str, Set[str]]]
 
 
-class ReverseIndexBlocker(abc.ABC):
+class ReverseIndexBlocker(Blocker):
     """
     Mixin for blockers that block based on the creation of a reverse index.
 

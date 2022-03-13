@@ -1,10 +1,8 @@
 
-from typing import Dict, List, Optional
-
-import pandas as pd
+from typing import List, Optional
 
 from resolver import Entlet
-from resolver.similarity._base import ColumnarTransform, SimilarityMetric
+from resolver._base import ColumnarTransform, SimilarityMetric
 
 
 class ExactMatch(SimilarityMetric):

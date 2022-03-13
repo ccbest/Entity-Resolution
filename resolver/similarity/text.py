@@ -2,8 +2,7 @@
 from typing import List, Optional
 
 from resolver import Entlet
-from resolver._base import ColumnarTransform
-from resolver.similarity._base import SimilarityMetric
+from resolver._base import ColumnarTransform, SimilarityMetric
 
 
 class LevenshteinDistance(SimilarityMetric):

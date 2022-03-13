@@ -3,7 +3,7 @@ from typing import Callable, List, Tuple
 
 import pandas as pd
 
-from resolver.blocking._base import Blocker, BLOCKER_RETURN
+from resolver._base import Blocker, BLOCKER_RETURN
 
 
 class SortedValueBlocker(Blocker):

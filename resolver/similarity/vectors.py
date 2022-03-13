@@ -1,12 +1,10 @@
 
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
-import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.spatial.distance import euclidean
 
-from resolver._base import ColumnarTransform
-from resolver.similarity._base import SimilarityMetric
+from resolver._base import ColumnarTransform, SimilarityMetric
 from resolver import Entlet
 
 

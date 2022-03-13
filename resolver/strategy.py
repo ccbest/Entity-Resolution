@@ -1,13 +1,11 @@
 
 
-from typing import Collection, Optional
+from typing import Collection, Generator, Optional, Tuple
 
 import pandas as pd
 
-from resolver import EntletMap
-from resolver._base import ScoringReducer, SimilarityMetric
-from resolver.blocking._base import Blocker
-from . import Filter
+from resolver import EntletMap, Filter
+from resolver._base import Blocker, ScoringReducer, SimilarityMetric
 
 
 class Strategy:
@@ -27,7 +25,7 @@ class Strategy:
         self.partitions = partitions
         self.filters = filters
 
-    def resolve(self, entletmap: EntletMap, entlet_df: pd.DataFrame) -> pd.DataFrame:
+    def resolve(self, entletmap: EntletMap, entlet_df: pd.DataFrame) -> Generator[Tuple[str, str], None, None]:
         """
 
         Args:
