@@ -60,8 +60,14 @@ class Pipeline:
 
         return entlet_df
 
+    @property
+    def transforms(self):
+        return [transform for strat in self.strategies for transform in strat.transforms]
+
     def fragment(self, entlet_df: pd.DataFrame, fragment_fields: List[str]) -> pd.DataFrame:
         """
+        DEPRECATED
+
         Convert a dataframe of entlets into a dataframe of fragments. The resulting dataframe's columns
         reflect the fragment fields, which are dot-notated.
 

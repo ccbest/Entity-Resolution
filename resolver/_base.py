@@ -34,19 +34,14 @@ class ColumnarTransform(abc.ABC):
     @abc.abstractmethod
     def __init__(self, **kwargs):
         self.kwargs: Dict[str, Any] = kwargs
-        self.transformed_field_name: Optional[str] = None
+        self.field_name: Optional[str] = None
 
     @abc.abstractmethod
     def __hash__(self) -> Hashable:
         pass
 
-    @staticmethod
     @abc.abstractmethod
-    def _get_new_col_name(field: str) -> str:
-        pass
-
-    @abc.abstractmethod
-    def transform(self, fragments_df: pd.DataFrame, field: str) -> Tuple[str, pd.DataFrame]:
+    def transform(self, values_df: pd.DataFrame) -> pd.DataFrame:
         """
         Executes a transform against a given column.
 
@@ -54,7 +49,6 @@ class ColumnarTransform(abc.ABC):
 
         Args:
             fragments_df (pd.DataFrame): A pandas Dataframe where each record is a fragment
-            field (str): The name of the field in the dataframe to transform
 
         Returns:
             (pd.DataFrame) the same dataframe with an added column for the transformed value
@@ -126,28 +120,37 @@ class SimilarityMetric(abc.ABC):
     @abc.abstractmethod
     def __init__(
             self,
-            transforms: Optional[List[ColumnarTransform]] = None,
+            transforms: Optional[Dict[str, ColumnarTransform]] = None,
             **kwargs
     ):
-        self.transforms = transforms or []
+        self.transforms = transforms or {}
         self.kwargs = kwargs
 
-    def transform(self, fragments: pd.DataFrame):
+    def transform(self, entlet_df: pd.DataFrame) -> pd.DataFrame:
         """
         Run all specified transforms in sequence. The transforms will append columns to the dataframe,
         so be sure to obtain the final field name using the .get_transformed_field_name property.
 
         Args:
-            fragments (DataFrame): A pandas dataframe where each record is a fragment
+            entlet_df (DataFrame): A dataframe of entlets
 
         Returns:
             (DataFrame): The same dataframe, with columns added from each transform
         """
-        col_name = self.field
-        for transform in self.transforms:
-            col_name, fragments = transform.transform(fragments, col_name)
 
-        return fragments
+        for field, transform in self.transforms.items():
+            value_df = entlet_df.applymap(
+                lambda x: {
+                    'entlet_id': x['entlet'].entlet_id,
+                    'transforming': x['entlet'].get(self.field, [])
+                }
+            )
+
+            value_df['transforming'] = transform.transform(value_df)
+
+
+
+        return value_df
 
     @abc.abstractmethod
     def run(self, entlet1: Entlet, entlet2: Entlet) -> float:

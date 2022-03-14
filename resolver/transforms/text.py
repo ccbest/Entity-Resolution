@@ -1,5 +1,5 @@
 
-from typing import Tuple
+from typing import Union
 
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -11,69 +11,104 @@ class TfIdfTokenizedVector(ColumnarTransform):
 
     VECTORIZER = TfidfVectorizer()
 
-    def __init__(self, **kwargs):
+    def __init__(self, field: Union[str, ColumnarTransform], **kwargs):
+        self.wrapped_transform = None
+        self.field_name = field
+
+        if isinstance(field, ColumnarTransform):
+            self.wrapped_transform = field
+            self.field_name = field.field_name
+
         self.kwargs = kwargs
-        self.transformed_field_name = None
 
     def __hash__(self):
         return hash(f"tfidftokenizedvector_{str(self.kwargs)}")
 
-    @staticmethod
-    def _get_new_col_name(field: str):
-        return f"{field}_tfidftokenized"
-
-    def transform(self, fragments_df: pd.DataFrame, field: str) -> Tuple[str, pd.DataFrame]:
+    def transform(self, values_df: pd.DataFrame) -> pd.DataFrame:
         """
         Executes a transform against a given column.
 
         Args:
-            fragments_df (pd.DataFrame): A pandas Dataframe where each record is a fragment
-            field (str): The name of the field in the dataframe to transform
+            values_df (pd.DataFrame): A pandas Dataframe where each record is a fragment
 
         Returns:
-            (Tuple[str, pd.DataFrame]) the same dataframe with an added column for the transformed value
+            (pd.DataFrame) the same dataframe with the column 'transforming' representing
+            the transformed values
         """
-        new_col_name = self._get_new_col_name(field)
-        self.transformed_field_name = new_col_name
+        # "field" is actually a wrapped ColumnarTransform
+        if self.wrapped_transform:
+            values_df = self.wrapped_transform.transform(values_df)
 
-        fragments_df[new_col_name] = pd.Series(
-            list(self.VECTORIZER.fit_transform(fragments_df[field]))
+        values_df['transforming'] = pd.Series(
+            list(self.VECTORIZER.fit_transform(values_df['transforming']))
         )
-        return new_col_name, fragments_df
+        return values_df
 
 
-# def tfidf_ngrams(df, column_name, **kwargs):
-#     """
-#     Takes a column and returns TFIDF vectors for each value.
-#
-#     NOTE:
-#     There is some inconsistency around what an ngram is - some definitions imply it is the combination of sequential
-#     tokens, e.g. 'The quick brown fox' -> [ "The quick", "quick brown", "brown fox" ], while others imply it is the
-#     combination of sequential characters, e.g. 'The quick brown fox' -> [ "Th", "he", "e " ... ].
-#
-#     Within the context of this project, ngrams shall be defined as sequential tokens (the former), while sequential
-#     characters will be referred to as "chargrams"
-#
-#     Args:
-#         df: a dataframe, must contain column "entlet_id"
-#         column_name: the name of the column to transform
-#     Keyword Args:
-#         n: the number of tokens to be combined
-#
-#     Returns:
-#         df with the following added columns:
-#             {field}_ngram_{n}
-#             {field}_ngram_{n}_tf
-#             {field}_ngram_{n}_idf
-#         (str) {field}_ngram_{n}_idf
-#     """
-#
-#     n = kwargs.get("n", 2)
-#     ngram = NGram(n=n, inputCol=column_name, outputCol=f'{column_name}_ngram_{n}')
-#     hashed_tf = HashingTF(inputCol=f'{column_name}_ngram_{n}', outputCol=f'{column_name}_ngram_{n}_tf')
-#     idf = IDF(inputCol=f'{column_name}_TF', outputCol=f'{column_name}_ngram_{n}_idf')
-#
-#     pipeline = Pipeline(stages=[ngram, hashed_tf, idf])
-#     model = pipeline.fit(df)
-#     return model.transform(df).select("entlet_id", f'{column_name}_ngram_idf_{n}')
+class UpperCase(ColumnarTransform):
 
+    def __init__(self, field: Union[str, ColumnarTransform], **kwargs):
+        self.wrapped_transform = None
+        self.field_name = field
+
+        if isinstance(field, ColumnarTransform):
+            self.wrapped_transform = field
+            self.field_name = field.field_name
+
+        self.kwargs = kwargs
+
+    def __hash__(self):
+        return hash(f"lowercase_{self.field_name}_{str(self.kwargs)}")
+
+    def transform(self, values_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Executes a transform against a given column.
+
+        Args:
+            values_df (pd.DataFrame): A pandas Dataframe where each record is a fragment
+
+        Returns:
+            (pd.DataFrame) the same dataframe with the column 'transforming' representing
+            the transformed values
+        """
+        # "field" is actually a wrapped ColumnarTransform
+        if self.wrapped_transform:
+            values_df = self.wrapped_transform.transform(values_df)
+
+        values_df['transforming'] = values_df['transforming'].map(lambda x: x.upper())
+        return values_df
+
+
+class LowerCase(ColumnarTransform):
+
+    def __init__(self, field: Union[str, ColumnarTransform], **kwargs):
+        self.wrapped_transform = None
+        self.field_name = field
+
+        if isinstance(field, ColumnarTransform):
+            self.wrapped_transform = field
+            self.field_name = field.field_name
+
+        self.kwargs = kwargs
+
+    def __hash__(self):
+        return hash(f"lowercase_{self.field_name}_{str(self.kwargs)}")
+
+    def transform(self, values_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Executes a transform against a given column.
+
+        Args:
+            values_df (pd.DataFrame): A pandas Dataframe where each record is a fragment
+
+        Returns:
+            (pd.DataFrame) the same dataframe with the column 'transforming' representing
+            the transformed values
+        """
+        # "field" is actually a wrapped ColumnarTransform
+        if self.wrapped_transform:
+            values_df = self.wrapped_transform.transform(values_df)
+
+        values_df['transforming'] = values_df['transforming'].map(lambda x: x.lower())
+
+        return values_df

@@ -22,6 +22,7 @@ class ExactMatch(SimilarityMetric):
         Returns:
             (float) 1.0 if the values match exactly, 0.0 if not
         """
+
         if any(x == y for x in entlet1.get(self.field, []) for y in entlet2.get(self.field, [])):
             return 1.0
 

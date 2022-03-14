@@ -1,4 +1,0 @@
-
-"""Package containing 'core' objects"""
-
-

@@ -25,6 +25,10 @@ class Strategy:
         self.partitions = partitions
         self.filters = filters
 
+    @property
+    def transforms(self):
+        return [transform for metric in self.metrics for transform in metric.transforms]
+
     def resolve(self, entletmap: EntletMap, entlet_df: pd.DataFrame) -> Generator[Tuple[str, str], None, None]:
         """
 
