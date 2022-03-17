@@ -47,7 +47,7 @@ class Strategy:
         Returns:
 
         """
-        blocked = self.blocker.block(fragments)
+        blocked = self.blocker.block(fragments, )
 
         for metric in self.metrics:
             blocked[metric.field_name] = blocked.apply(metric.run, axis=1)

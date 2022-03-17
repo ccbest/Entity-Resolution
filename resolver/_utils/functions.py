@@ -1,5 +1,6 @@
 
-from typing import Any, Dict, Generator, Hashable, List
+from collections import defaultdict
+from typing import Any, Dict, Generator, Hashable, Iterable, List
 
 
 def merge_union(
@@ -145,4 +146,55 @@ def deduplicate_nested_structure(obj: Any) -> Any:
         return {k: deduplicate_nested_structure(v) for k, v in obj.items()}
 
     return obj
+
+
+def condense_dot_notated_fields(fields: List[str]) -> Dict[str, List[str]]:
+    roots = {}
+    nested = defaultdict(list)
+    for field in fields:
+        if '.' not in field:
+            roots[field] = []
+            continue
+
+        root, leaf = field.split('.', 1)
+        nested[root].append(leaf)
+
+    for key in nested.copy():
+        if key.split('.', 1)[0] in roots:
+            nested.pop(key)
+
+    return {**nested, **roots}
+
+
+def slice_struct(obj: Any, fields: List[str]) -> Any:
+    """
+
+    Args:
+        obj:
+        fields:
+
+    Returns:
+
+    """
+    if not fields:
+        return obj
+
+    if isinstance(obj, (list, tuple)):
+        return type(obj)(slice_struct(x, fields) for x in obj)
+
+    if not isinstance(obj, dict):
+        # Implies there are still fields, but obj is not an array and
+        # not a dict either
+        raise ValueError
+
+    fields = condense_dot_notated_fields(fields)
+    _ = {}
+    for key, branches in fields.items():
+        if key not in obj:
+            raise KeyError
+
+        _[key] = slice_struct(obj[key], branches)
+
+    return _
+
 

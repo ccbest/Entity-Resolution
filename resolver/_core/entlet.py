@@ -7,7 +7,7 @@ import itertools
 import json
 from typing import Any, Callable, Dict, Generator, List, Tuple, Union
 
-from resolver._utils.functions import merge_union
+from resolver._utils.functions import merge_union, slice_struct
 
 # TODO: Values should have their type stored in the class for checking to avoid collisions
 # TODO: Deduplication of values could be moved to post-munge for efficiency
@@ -633,6 +633,9 @@ class Entlet(object):
         self.values.clear()
         self.const_values.clear()
         return self
+
+    def get_subset(self, fields: List[str]):
+        return slice_struct({**self.values, **self.const_values}, fields)
 
     def _produce_fragment_product(self, obj: Dict[str, Any], field_names: List[str]):
         """
