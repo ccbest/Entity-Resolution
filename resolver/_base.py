@@ -1,4 +1,5 @@
 import abc
+from collections import defaultdict
 from typing import Any, Dict, Generator, Hashable, List, Optional, Tuple
 
 import pandas as pd
@@ -34,7 +35,7 @@ class ColumnarTransform(abc.ABC):
     @abc.abstractmethod
     def __init__(self, **kwargs):
         self.kwargs: Dict[str, Any] = kwargs
-        self.field_name: Optional[str] = None
+        self.wrapped_transform: Optional[ColumnarTransform] = None
 
     @abc.abstractmethod
     def __hash__(self) -> Hashable:
@@ -48,7 +49,7 @@ class ColumnarTransform(abc.ABC):
         Example: vectorizing textual data using TF-IDF
 
         Args:
-            fragments_df (pd.DataFrame): A pandas Dataframe where each record is a fragment
+            values_df (pd.DataFrame): A pandas Dataframe where each record is a fragment
 
         Returns:
             (pd.DataFrame) the same dataframe with an added column for the transformed value
@@ -117,16 +118,19 @@ class StandardizationTransform(abc.ABC):
 class SimilarityMetric(abc.ABC):
     """Compares two values"""
 
+    field: str
+
     @abc.abstractmethod
     def __init__(
             self,
-            transforms: Optional[Dict[str, ColumnarTransform]] = None,
+            transform: ColumnarTransform = None,
             **kwargs
     ):
-        self.transforms = transforms or {}
+        self.applied_transform = transform or None
+        self.transformed_values = None
         self.kwargs = kwargs
 
-    def transform(self, entlet_df: pd.DataFrame) -> pd.DataFrame:
+    def transform(self, entlet_df: pd.DataFrame) -> None:
         """
         Run all specified transforms in sequence. The transforms will append columns to the dataframe,
         so be sure to obtain the final field name using the .get_transformed_field_name property.
@@ -137,31 +141,49 @@ class SimilarityMetric(abc.ABC):
         Returns:
             (DataFrame): The same dataframe, with columns added from each transform
         """
+        def _dataframe_to_dict(df):
+            # TODO: temporary solution
+            out = defaultdict(list)
+            for record in zip(df.entlet_id, df.value):
+                out[record[0]].append(record[1])
+            return out
 
-        for field, transform in self.transforms.items():
-            value_df = entlet_df.applymap(
+        value_df = pd.DataFrame(
+            list(entlet_df.apply(
                 lambda x: {
                     'entlet_id': x['entlet'].entlet_id,
-                    'transforming': x['entlet'].get(self.field, [])
-                }
-            )
+                    'value': x['entlet'].get(self.field, [])
+                },
+                axis=1
+            )),
+            columns=['entlet_id', 'value']
+        )
 
-            value_df['transforming'] = transform.transform(value_df)
+        value_df = value_df.explode('value')
 
+        if not self.applied_transform:
+            self.transformed_values = _dataframe_to_dict(value_df)
+            return
 
+        self.transformed_values = _dataframe_to_dict(self.applied_transform.transform(value_df))
 
-        return value_df
+    def score(self, entlet1: Entlet, entlet2: Entlet) -> float:
+
+        return self.run(
+            self.transformed_values.get(entlet1.entlet_id, []),
+            self.transformed_values.get(entlet2.entlet_id, [])
+        )
 
     @abc.abstractmethod
-    def run(self, entlet1: Entlet, entlet2: Entlet) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
         Abstract method for a similarity metric's run method. The method must
         accept two fragments and return a float denoting the similarity of the two
         fragments.
 
         Args:
-            entlet1:
-            entlet2:
+            value1:
+            value2:
 
         Returns:
 

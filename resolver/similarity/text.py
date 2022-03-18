@@ -1,23 +1,22 @@
 
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from resolver import Entlet
 from resolver._base import ColumnarTransform, SimilarityMetric
 
 
 class LevenshteinDistance(SimilarityMetric):
 
-    def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(transforms, **kwargs)
+    def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
+        super().__init__(transform, **kwargs)
         self.field = field_name
 
-    def run(self, entlet1: Entlet, entlet2: Entlet) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            entlet1
-            entlet2
+            value1
+            value2
 
         Returns:
             (float) the cosine similarity of the vectors
@@ -26,24 +25,24 @@ class LevenshteinDistance(SimilarityMetric):
 
         return min(
             distance(x, y)
-            for x in entlet1.get(self.field, [])
-            for y in entlet2.get(self.field, [])
+            for x in value1
+            for y in value2
         )
 
 
 class LevenshteinRatio(SimilarityMetric):
 
-    def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(transforms, **kwargs)
+    def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
+        super().__init__(transform, **kwargs)
         self.field = field_name
 
-    def run(self, entlet1: Entlet, entlet2: Entlet) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
         Computes the Levenshtein ratio of two strings
 
         Args:
-            entlet1
-            entlet2
+            value1
+            value2
 
         Returns:
             (float)
@@ -52,24 +51,24 @@ class LevenshteinRatio(SimilarityMetric):
 
         return max(
             ratio(x, y)
-            for x in entlet1.get(self.field, [])
-            for y in entlet2.get(self.field, [])
+            for x in value1
+            for y in value2
         )
 
 
 class HammingDistance(SimilarityMetric):
 
-    def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(transforms, **kwargs)
+    def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
+        super().__init__(transform, **kwargs)
         self.field = field_name
 
-    def run(self, entlet1: Entlet, entlet2: Entlet) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            entlet1
-            entlet2
+            value1
+            value2
 
         Returns:
             (float) the cosine similarity of the vectors
@@ -78,24 +77,24 @@ class HammingDistance(SimilarityMetric):
 
         return min(
             hamming(x, y)
-            for x in entlet1.get(self.field, [])
-            for y in entlet2.get(self.field, [])
+            for x in value1
+            for y in value2
         )
 
 
 class JaroDistance(SimilarityMetric):
 
-    def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(transforms, **kwargs)
+    def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
+        super().__init__(transform, **kwargs)
         self.field = field_name
 
-    def run(self, entlet1: Entlet, entlet2: Entlet) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            entlet1
-            entlet2
+            value1
+            value2
 
         Returns:
             (float) the cosine similarity of the vectors
@@ -104,8 +103,8 @@ class JaroDistance(SimilarityMetric):
 
         return min(
             jaro(x, y)
-            for x in entlet1.get(self.field, [])
-            for y in entlet2.get(self.field, [])
+            for x in value1
+            for y in value2
         )
 
 
@@ -119,17 +118,17 @@ class JaroWinklerDistance(SimilarityMetric):
     Additional information available at: https://maxbachmann.github.io/Levenshtein/levenshtein.html
     """
 
-    def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(transforms, **kwargs)
+    def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
+        super().__init__(transform, **kwargs)
         self.field = field_name
 
-    def run(self, entlet1: Entlet, entlet2: Entlet) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            entlet1
-            entlet2
+            value1
+            value2
 
         Returns:
             (float) the cosine similarity of the vectors
@@ -138,7 +137,7 @@ class JaroWinklerDistance(SimilarityMetric):
 
         return min(
             jaro_winkler(x, y)
-            for x in entlet1.get(self.field, [])
-            for y in entlet2.get(self.field, [])
+            for x in value1
+            for y in value2
         )
 

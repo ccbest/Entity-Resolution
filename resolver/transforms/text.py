@@ -1,5 +1,5 @@
 
-from typing import Union
+from typing import Optional, Union
 
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -11,14 +11,8 @@ class TfIdfTokenizedVector(ColumnarTransform):
 
     VECTORIZER = TfidfVectorizer()
 
-    def __init__(self, field: Union[str, ColumnarTransform], **kwargs):
-        self.wrapped_transform = None
-        self.field_name = field
-
-        if isinstance(field, ColumnarTransform):
-            self.wrapped_transform = field
-            self.field_name = field.field_name
-
+    def __init__(self, transform: Optional[ColumnarTransform] = None, **kwargs):
+        self.wrapped_transform = transform
         self.kwargs = kwargs
 
     def __hash__(self):
@@ -35,26 +29,20 @@ class TfIdfTokenizedVector(ColumnarTransform):
             (pd.DataFrame) the same dataframe with the column 'transforming' representing
             the transformed values
         """
-        # "field" is actually a wrapped ColumnarTransform
         if self.wrapped_transform:
+            # If this transform wraps another, run the wrapped transform first
             values_df = self.wrapped_transform.transform(values_df)
 
-        values_df['transforming'] = pd.Series(
-            list(self.VECTORIZER.fit_transform(values_df['transforming']))
+        values_df['value'] = pd.Series(
+            list(self.VECTORIZER.fit_transform(values_df['value']))
         )
         return values_df
 
 
 class UpperCase(ColumnarTransform):
 
-    def __init__(self, field: Union[str, ColumnarTransform], **kwargs):
-        self.wrapped_transform = None
-        self.field_name = field
-
-        if isinstance(field, ColumnarTransform):
-            self.wrapped_transform = field
-            self.field_name = field.field_name
-
+    def __init__(self, transform: Optional[ColumnarTransform] = None, **kwargs):
+        self.wrapped_transform = transform
         self.kwargs = kwargs
 
     def __hash__(self):
@@ -75,20 +63,14 @@ class UpperCase(ColumnarTransform):
         if self.wrapped_transform:
             values_df = self.wrapped_transform.transform(values_df)
 
-        values_df['transforming'] = values_df['transforming'].map(lambda x: x.upper())
+        values_df['value'] = values_df['value'].map(lambda x: x.upper())
         return values_df
 
 
 class LowerCase(ColumnarTransform):
 
-    def __init__(self, field: Union[str, ColumnarTransform], **kwargs):
-        self.wrapped_transform = None
-        self.field_name = field
-
-        if isinstance(field, ColumnarTransform):
-            self.wrapped_transform = field
-            self.field_name = field.field_name
-
+    def __init__(self, transform: Optional[ColumnarTransform] = None, **kwargs):
+        self.wrapped_transform = transform
         self.kwargs = kwargs
 
     def __hash__(self):
@@ -109,6 +91,6 @@ class LowerCase(ColumnarTransform):
         if self.wrapped_transform:
             values_df = self.wrapped_transform.transform(values_df)
 
-        values_df['transforming'] = values_df['transforming'].map(lambda x: x.lower())
+        values_df['value'] = values_df['value'].map(lambda x: x.lower())
 
         return values_df
