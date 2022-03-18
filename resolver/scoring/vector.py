@@ -1,10 +1,3 @@
-
-
-import numpy as np
-import pandas as pd
-
-from resolver._base import ScoringReducer
-
 """
 
 These are the methods used to boil down multiple scores into a single continuous one.
@@ -17,7 +10,9 @@ following element is one score of potentially many.
 
 """
 
+import numpy as np
 
+from resolver._base import ScoringReducer
 
 
 class VectorMagnitude(ScoringReducer):
@@ -26,10 +21,8 @@ class VectorMagnitude(ScoringReducer):
         self.min = min
         self.kwargs = kwargs
 
-    def score(self, row: pd.Series):
-
-        filtered = np.linalg.norm(np.array(row)) > self.min
-        return filtered
+    def __call__(self, *args):
+        return np.linalg.norm(np.array(args)) > self.min
 
 
 def add(record):

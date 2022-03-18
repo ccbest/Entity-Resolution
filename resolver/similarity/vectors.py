@@ -1,56 +1,56 @@
 
 from typing import Any, Dict, List, Optional
 
-import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.spatial.distance import euclidean
 
-from .._base import ColumnarTransform, SimilarityMetric
+from resolver._base import ColumnarTransform, SimilarityMetric
 
 
 class CosineSimilarity(SimilarityMetric):
 
-    def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+    def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
+        super().__init__(transform, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_CosineSimilarity"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            record (Dict[str, Any]): The record containing both fragments
+            value1:
+            value2:
 
         Returns:
             (float) the cosine similarity of the vectors
         """
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return cosine_similarity(val1, val2)[0][0]
+        return min(
+            cosine_similarity(x, y)[0][0]
+            for x in value1
+            for y in value2
+        )
 
 
 class EuclideanDistance(SimilarityMetric):
 
-    def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+    def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
+        super().__init__(transform, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_EuclideanDistance"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
         Computes the euclidean distance between 2 vectors.
 
         Args:
-            record (Dict[str, Any]): The record containing both fragments
+            value1:
+            value2:
 
         Returns:
             (float) the cosine similarity of the vectors
         """
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return euclidean(val1, val2)
+
+        return min(
+            euclidean(x, y)
+            for x in value1
+            for y in value2
+        )

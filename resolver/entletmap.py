@@ -1,10 +1,10 @@
 
 from __future__ import annotations
-from typing import List, MutableMapping, Iterator, Tuple
+from typing import List, MutableMapping, Iterator
 
 import pandas as pd
 
-from . import Entlet
+from resolver import Entlet
 
 
 class EntletMap(MutableMapping):

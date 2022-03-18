@@ -1,33 +1,28 @@
 
-from typing import Dict, List, Optional
-
-import pandas as pd
+from typing import Any, List, Optional
 
 from resolver._base import ColumnarTransform, SimilarityMetric
 
 
 class ExactMatch(SimilarityMetric):
 
-    def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+    def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
+        super().__init__(transform, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_ExactMatch"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
         Compares two values for exact match.
 
         Args:
-            record (Dict[str, Any]): The record containing both fragments
+            value1:
+            value2:
 
         Returns:
             (float) 1.0 if the values match exactly, 0.0 if not
         """
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        if val1 == val2:
+
+        if any(x == y for x in value1 for y in value2):
             return 1.0
 
         return 0.0

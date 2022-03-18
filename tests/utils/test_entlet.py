@@ -1,7 +1,7 @@
 import operator
 import pytest
 
-from resolver._core.entlet import Entlet
+from resolver import Entlet
 
 
 def test_add():

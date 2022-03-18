@@ -1,113 +1,111 @@
 
-from typing import Dict, List, Optional
-
-import pandas as pd
+from typing import Any, List, Optional
 
 from resolver._base import ColumnarTransform, SimilarityMetric
 
 
 class LevenshteinDistance(SimilarityMetric):
 
-    def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+    def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
+        super().__init__(transform, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_LevenshteinDistance"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            record (Dict[str, Any]): The record containing both fragments
+            value1
+            value2
 
         Returns:
             (float) the cosine similarity of the vectors
         """
         from Levenshtein import distance
 
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return distance(val1, val2)
+        return min(
+            distance(x, y)
+            for x in value1
+            for y in value2
+        )
 
 
 class LevenshteinRatio(SimilarityMetric):
 
-    def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+    def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
+        super().__init__(transform, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_LevenshteinRatio"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
-        Computes the cosine similarity of 2 vectors.
+        Computes the Levenshtein ratio of two strings
 
         Args:
-            record (Dict[str, Any]): The record containing both fragments
+            value1
+            value2
 
         Returns:
-            (float) the cosine similarity of the vectors
+            (float)
         """
         from Levenshtein import ratio
 
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return ratio(val1, val2)
+        return max(
+            ratio(x, y)
+            for x in value1
+            for y in value2
+        )
 
 
 class HammingDistance(SimilarityMetric):
 
-    def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+    def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
+        super().__init__(transform, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_HammingDistance"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            record (Dict[str, Any]): The record containing both fragments
+            value1
+            value2
 
         Returns:
             (float) the cosine similarity of the vectors
         """
         from Levenshtein import hamming
 
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return hamming(val1, val2)
+        return min(
+            hamming(x, y)
+            for x in value1
+            for y in value2
+        )
 
 
 class JaroDistance(SimilarityMetric):
 
-    def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+    def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
+        super().__init__(transform, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_JaroDistance"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            record (Dict[str, Any]): The record containing both fragments
+            value1
+            value2
 
         Returns:
             (float) the cosine similarity of the vectors
         """
         from Levenshtein import jaro
 
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return jaro(val1, val2)
+        return min(
+            jaro(x, y)
+            for x in value1
+            for y in value2
+        )
 
 
 class JaroWinklerDistance(SimilarityMetric):
@@ -120,26 +118,26 @@ class JaroWinklerDistance(SimilarityMetric):
     Additional information available at: https://maxbachmann.github.io/Levenshtein/levenshtein.html
     """
 
-    def __init__(self, field_name: str, transforms: Optional[List[ColumnarTransform]] = None, **kwargs):
-        super().__init__(field_name, transforms, **kwargs)
+    def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
+        super().__init__(transform, **kwargs)
+        self.field = field_name
 
-    @property
-    def field_name(self):
-        return f"{self.transformed_field_name}_JaroWinklerDistance"
-
-    def run(self, record: pd.Series) -> float:
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            record (Dict[str, Any]): The record containing both fragments
+            value1
+            value2
 
         Returns:
             (float) the cosine similarity of the vectors
         """
         from Levenshtein import jaro_winkler
 
-        field = self.transformed_field_name
-        val1, val2 = record[f"{field}_frag1"], record[f"{field}_frag2"]
-        return jaro_winkler(val1, val2)
+        return min(
+            jaro_winkler(x, y)
+            for x in value1
+            for y in value2
+        )
 

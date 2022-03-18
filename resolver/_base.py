@@ -1,7 +1,13 @@
 import abc
-from typing import Any, Dict, Hashable, List, Optional, Tuple
+from collections import defaultdict
+from typing import Any, Dict, Generator, Hashable, List, Optional, Tuple
 
-from pandas import DataFrame, Series
+import pandas as pd
+
+from resolver import Entlet
+
+
+BLOCKER_RETURN = Generator[Tuple[str, str], None, None]
 
 
 class Blocker(abc.ABC):
@@ -11,17 +17,15 @@ class Blocker(abc.ABC):
         self.field = field
 
     @abc.abstractmethod
-    def block(self, fragments_df: DataFrame) -> DataFrame:
+    def block(self, entlet_df: pd.DataFrame) -> Generator[Tuple[str, str], None, None]:
         """
         Executes the blocking logic against a DataFrame
 
         Args:
-            fragments_df (pandas.DataFrame): A pandas Dataframe where each record is a fragment
+            entlet_df (pandas.DataFrame): A pandas Dataframe with one column (the entlet objects)
 
         Returns:
-            (pandas.DataFrame) A dataframe whose records have been 'blocked'. Records from the 'left'
-            fragment will be suffixed by '_frag1', and records from the 'right' fragment will be
-            suffixed with '_frag2'.
+            A generator which yields pairs of entlet ids that have been blocked together
         """
         pass
 
@@ -31,27 +35,21 @@ class ColumnarTransform(abc.ABC):
     @abc.abstractmethod
     def __init__(self, **kwargs):
         self.kwargs: Dict[str, Any] = kwargs
-        self.transformed_field_name: Optional[str] = None
+        self.wrapped_transform: Optional[ColumnarTransform] = None
 
     @abc.abstractmethod
     def __hash__(self) -> Hashable:
         pass
 
-    @staticmethod
     @abc.abstractmethod
-    def _get_new_col_name(field: str) -> str:
-        pass
-
-    @abc.abstractmethod
-    def transform(self, fragments_df: DataFrame, field: str) -> Tuple[str, DataFrame]:
+    def transform(self, values_df: pd.DataFrame) -> pd.DataFrame:
         """
         Executes a transform against a given column.
 
         Example: vectorizing textual data using TF-IDF
 
         Args:
-            fragments_df (pd.DataFrame): A pandas Dataframe where each record is a fragment
-            field (str): The name of the field in the dataframe to transform
+            values_df (pd.DataFrame): A pandas Dataframe where each record is a fragment
 
         Returns:
             (pd.DataFrame) the same dataframe with an added column for the transformed value
@@ -65,94 +63,26 @@ class ScoringReducer(abc.ABC):
     @abc.abstractmethod
     def __init__(
             self,
-            field: str,
-            transform: ColumnarTransform = None,
+            threshold: float,
             **kwargs
     ):
         pass
 
     @abc.abstractmethod
-    def score(self, row: Series) -> float:
+    def __call__(self, *args) -> float:
         """
         Abstract method for a similarity metric's run method. The method must
         accept two fragments and return a float denoting the similarity of the two
         fragments.
 
         Args:
-            fragment1:
-            fragment2:
+            args:
 
         Returns:
 
         """
         pass
 
-
-class SimilarityMetric(abc.ABC):
-    """Compares two values"""
-
-    @abc.abstractmethod
-    def __init__(
-            self,
-            field: str,
-            transforms: Optional[List[ColumnarTransform]] = None,
-            **kwargs
-    ):
-        self.field = field
-        self.transforms = transforms or []
-        self.kwargs = kwargs
-
-    @property
-    @abc.abstractmethod
-    def field_name(self):
-        """
-        Provides the field name that should be compared using the similarity metric. If transforms
-        have been executed against the field, they will have updated the field name.
-        """
-        pass
-
-    @property
-    def transformed_field_name(self):
-        """
-        Provides the field name that should be compared using the similarity metric. If transforms
-        have been executed against the field, they will have updated the field name.
-        """
-        if self.transforms:
-            return self.transforms[-1].transformed_field_name
-
-        return self.field
-
-    def transform(self, fragments: DataFrame):
-        """
-        Run all specified transforms in sequence. The transforms will append columns to the dataframe,
-        so be sure to obtain the final field name using the .get_transformed_field_name property.
-
-        Args:
-            fragments (DataFrame): A pandas dataframe where each record is a fragment
-
-        Returns:
-            (DataFrame): The same dataframe, with columns added from each transform
-        """
-        col_name = self.field
-        for transform in self.transforms:
-            col_name, fragments = transform.transform(fragments, col_name)
-
-        return fragments
-
-    @abc.abstractmethod
-    def run(self, blocked_fragments: Series) -> float:
-        """
-        Abstract method for a similarity metric's run method. The method must
-        accept two fragments and return a float denoting the similarity of the two
-        fragments.
-
-        Args:
-            blocked_fragments:
-
-        Returns:
-
-        """
-        pass
 
 
 class StandardizationTransform(abc.ABC):
@@ -181,5 +111,81 @@ class StandardizationTransform(abc.ABC):
 
         Returns:
             (Any) The standardized value
+        """
+        pass
+
+
+class SimilarityMetric(abc.ABC):
+    """Compares two values"""
+
+    field: str
+
+    @abc.abstractmethod
+    def __init__(
+            self,
+            transform: ColumnarTransform = None,
+            **kwargs
+    ):
+        self.applied_transform = transform or None
+        self.transformed_values = None
+        self.kwargs = kwargs
+
+    def transform(self, entlet_df: pd.DataFrame) -> None:
+        """
+        Run all specified transforms in sequence. The transforms will append columns to the dataframe,
+        so be sure to obtain the final field name using the .get_transformed_field_name property.
+
+        Args:
+            entlet_df (DataFrame): A dataframe of entlets
+
+        Returns:
+            (DataFrame): The same dataframe, with columns added from each transform
+        """
+        def _dataframe_to_dict(df):
+            # TODO: temporary solution
+            out = defaultdict(list)
+            for record in zip(df.entlet_id, df.value):
+                out[record[0]].append(record[1])
+            return out
+
+        value_df = pd.DataFrame(
+            list(entlet_df.apply(
+                lambda x: {
+                    'entlet_id': x['entlet'].entlet_id,
+                    'value': x['entlet'].get(self.field, [])
+                },
+                axis=1
+            )),
+            columns=['entlet_id', 'value']
+        )
+
+        value_df = value_df.explode('value')
+
+        if not self.applied_transform:
+            self.transformed_values = _dataframe_to_dict(value_df)
+            return
+
+        self.transformed_values = _dataframe_to_dict(self.applied_transform.transform(value_df))
+
+    def score(self, entlet1: Entlet, entlet2: Entlet) -> float:
+
+        return self.run(
+            self.transformed_values.get(entlet1.entlet_id, []),
+            self.transformed_values.get(entlet2.entlet_id, [])
+        )
+
+    @abc.abstractmethod
+    def run(self, value1: List[Any], value2: List[Any]) -> float:
+        """
+        Abstract method for a similarity metric's run method. The method must
+        accept two fragments and return a float denoting the similarity of the two
+        fragments.
+
+        Args:
+            value1:
+            value2:
+
+        Returns:
+
         """
         pass
