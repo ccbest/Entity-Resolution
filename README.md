@@ -27,7 +27,7 @@ For more in depth workflows and explanations of the methodology, reference the [
 ## Install
 Install the latest version of ResolvER:
 ```shell
-$ pip install python-resolver 
+$ pip install py-resolver 
 ```
 
 ## Research
