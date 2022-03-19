@@ -1,5 +1,5 @@
 
-from typing import Any, Dict, List
+from typing import Any, Dict, Generator, Hashable, List
 
 
 def merge_union(
@@ -116,3 +116,32 @@ def merge_union(
         return type(obj2)([obj1, *obj2])
 
     return default_union_type([obj1, obj2])
+
+
+def deduplicate_nested_structure(obj: Any) -> Any:
+    """
+    Deduplicates data structures within a deeply nested structure.
+
+    Args:
+        obj (Any): A deeply nested data structure.
+
+    Returns:
+
+    """
+    if not obj:
+        return obj
+
+    if isinstance(obj, Generator):
+        obj = list(obj)
+
+    if isinstance(obj, (list, tuple)):
+        if not isinstance(obj[0], Hashable):
+            # Can't be deduplicated with set, so stringify first and then convert back
+            return type(obj)(map(eval, set(map(str, obj))))
+
+        return type(obj)(set(obj))
+
+    if isinstance(obj, dict):
+        return {k: deduplicate_nested_structure(v) for k, v in obj.items()}
+
+    return obj

@@ -7,7 +7,7 @@ import itertools
 import json
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
 
-from resolver._utils.functions import merge_union
+from resolver._functions import merge_union
 
 # TODO: Values should have their type stored in the class for checking to avoid collisions
 # TODO: Deduplication of values could be moved to post-munge for efficiency
@@ -386,50 +386,6 @@ class Entlet(object):
                     self.values[key].append(obj[key])
             else:
                 merge_values(self.values[key], obj[key], key)
-
-        return self
-
-    def merge(self, entlet: Entlet) -> Entlet:
-        """
-        Merges another entlet instance into this one.
-
-        Accepts the .dump() from another entlet. Should not be used outside of rollup.
-        Functionally the same as .add() except doesn't check for constant fields
-
-        Args:
-            entlet: keys and values
-
-        Returns:
-            None
-
-        """
-
-        def merge_values(a, b, _path):
-            if isinstance(b, list):
-                for item in b:
-                    merge_values(a, item, _path)
-                    return True
-
-            if isinstance(b, type(a[0])):
-                if b not in a:
-                    a.append(b)
-                return True
-
-            raise ValueError(f"Field {_path} expected type {type(a[0])}, received type {type(b)}")
-
-        for key in entlet.dump():
-            if key not in self.values:
-                if isinstance(entlet[key], list):
-                    self.values[key] += entlet[key]
-
-                elif isinstance(self.values[key], list):
-                    self.values[key].append(entlet[key])
-
-                else:
-                    self.values[key] = [self.values[key], entlet[key]]
-
-            else:
-                merge_values(self.values[key], entlet[key], key)
 
         return self
 

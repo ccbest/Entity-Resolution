@@ -1,5 +1,5 @@
 
-from typing import Optional, Union
+from typing import Optional
 
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -45,9 +45,6 @@ class UpperCase(ColumnarTransform):
         self.wrapped_transform = transform
         self.kwargs = kwargs
 
-    def __hash__(self):
-        return hash(f"lowercase_{self.field_name}_{str(self.kwargs)}")
-
     def transform(self, values_df: pd.DataFrame) -> pd.DataFrame:
         """
         Executes a transform against a given column.
@@ -72,9 +69,6 @@ class LowerCase(ColumnarTransform):
     def __init__(self, transform: Optional[ColumnarTransform] = None, **kwargs):
         self.wrapped_transform = transform
         self.kwargs = kwargs
-
-    def __hash__(self):
-        return hash(f"lowercase_{self.field_name}_{str(self.kwargs)}")
 
     def transform(self, values_df: pd.DataFrame) -> pd.DataFrame:
         """

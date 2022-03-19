@@ -9,7 +9,7 @@ import pandas as pd
 
 from resolver import EntletMap, Strategy
 from resolver._base import StandardizationTransform
-from resolver._utils.functions import deduplicate_nested_structure, merge_union
+from resolver._functions import deduplicate_nested_structure, merge_union
 
 
 class Pipeline:
@@ -44,9 +44,12 @@ class Pipeline:
         return entity_map
 
     @staticmethod
-    def standardize_entlets(entlet_df: pd.DataFrame, standardizers: Collection[StandardizationTransform]) -> pd.DataFrame:
+    def standardize_entlets(
+            entlet_df: pd.DataFrame,
+            standardizers: Collection[StandardizationTransform]
+    ) -> pd.DataFrame:
         """
-        Async application of standardization against the dataframe of entlets.
+        Applies standardization logic against the dataframe of entlets.
 
         Args:
             entlet_df (pd.DataFrame): a dataframe of entlets
@@ -63,23 +66,3 @@ class Pipeline:
     @property
     def transforms(self):
         return [transform for strat in self.strategies for transform in strat.transforms]
-
-    def fragment(self, entlet_df: pd.DataFrame, fragment_fields: List[str]) -> pd.DataFrame:
-        """
-        DEPRECATED
-
-        Convert a dataframe of entlets into a dataframe of fragments. The resulting dataframe's columns
-        reflect the fragment fields, which are dot-notated.
-
-        Args:
-            entlet_df (pd.DataFrame): A dataframe of entlets
-            fragment_fields (List[str]): A list of fields to fragment on
-
-        Returns:
-            pd.DataFrame
-        """
-        fragments = entlet_df.applymap(lambda x: list(x.get_fragments(fragment_fields)))
-        fragments = fragments["entlet"].apply(pd.Series).stack().reset_index(drop=True).apply(pd.Series)
-
-        return fragments
-

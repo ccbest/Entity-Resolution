@@ -16,7 +16,11 @@ from resolver._base import ScoringReducer
 
 
 class VectorMagnitude(ScoringReducer):
+    """
+    Treats each score provided as a dimension of a vector and takes the
+    resulting vector's magnitude
 
+    """
     def __init__(self, min, **kwargs):
         self.min = min
         self.kwargs = kwargs

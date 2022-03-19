@@ -95,4 +95,3 @@ class EntletMap(MutableMapping):
             (pd.DataFrame) A pandas dataframe with one column containing the entlet objects
         """
         return pd.DataFrame(self.entlets.values(), columns=['entlet'])
-
