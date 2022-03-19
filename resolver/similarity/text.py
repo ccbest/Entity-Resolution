@@ -5,6 +5,10 @@ from resolver._base import ColumnarTransform, SimilarityMetric
 
 
 class LevenshteinDistance(SimilarityMetric):
+    """
+    Measures the similarity of two entlets by applying Levenshtein distance
+    against the values of a given field.
+    """
 
     def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
         super().__init__(transform, **kwargs)
@@ -12,11 +16,11 @@ class LevenshteinDistance(SimilarityMetric):
 
     def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
-        Computes the cosine similarity of 2 vectors.
+        Computes the Levenshtein distance between two strings.
 
         Args:
-            value1
-            value2
+            value1: A list of values (corresponding to an entlet)
+            value2: Another list of values (corresponding to a presumably different entlet)
 
         Returns:
             (float) the cosine similarity of the vectors
@@ -31,6 +35,10 @@ class LevenshteinDistance(SimilarityMetric):
 
 
 class LevenshteinRatio(SimilarityMetric):
+    """
+    Measures the similarity of two entlets by applying Levenshtein ratio
+    against the values of a given field.
+    """
 
     def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
         super().__init__(transform, **kwargs)
@@ -41,8 +49,8 @@ class LevenshteinRatio(SimilarityMetric):
         Computes the Levenshtein ratio of two strings
 
         Args:
-            value1
-            value2
+            value1: A list of values (corresponding to an entlet)
+            value2: Another list of values (corresponding to a presumably different entlet)
 
         Returns:
             (float)
@@ -57,6 +65,10 @@ class LevenshteinRatio(SimilarityMetric):
 
 
 class HammingDistance(SimilarityMetric):
+    """
+    Measures the similarity of two entlets by applying Hamming distance
+    against the values of a given field.
+    """
 
     def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
         super().__init__(transform, **kwargs)
@@ -67,8 +79,8 @@ class HammingDistance(SimilarityMetric):
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            value1
-            value2
+            value1: A list of values (corresponding to an entlet)
+            value2: Another list of values (corresponding to a presumably different entlet)
 
         Returns:
             (float) the cosine similarity of the vectors
@@ -83,6 +95,10 @@ class HammingDistance(SimilarityMetric):
 
 
 class JaroDistance(SimilarityMetric):
+    """
+    Measures the similarity of two entlets by applying Jaro distance
+    against the values of a given field.
+    """
 
     def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
         super().__init__(transform, **kwargs)
@@ -93,8 +109,8 @@ class JaroDistance(SimilarityMetric):
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            value1
-            value2
+            value1: A list of values (corresponding to an entlet)
+            value2: Another list of values (corresponding to a presumably different entlet)
 
         Returns:
             (float) the cosine similarity of the vectors
@@ -109,13 +125,9 @@ class JaroDistance(SimilarityMetric):
 
 
 class JaroWinklerDistance(SimilarityMetric):
-
     """
-    Compute Jaro string similarity metric of two strings. The Jaro-Winkler string
-    similarity metric is a modification of Jaro metric giving more weight to common prefix,
-    as spelling mistakes are more likely to occur near ends of words.
-
-    Additional information available at: https://maxbachmann.github.io/Levenshtein/levenshtein.html
+    Measures the similarity of two entlets byt applying Jaro-Winkler distance
+    against the values of a given field.
     """
 
     def __init__(self, field_name: str, transform: Optional[ColumnarTransform] = None, **kwargs):
@@ -127,8 +139,8 @@ class JaroWinklerDistance(SimilarityMetric):
         Computes the cosine similarity of 2 vectors.
 
         Args:
-            value1
-            value2
+            value1: A list of values (corresponding to an entlet)
+            value2: Another list of values (corresponding to a presumably different entlet)
 
         Returns:
             (float) the cosine similarity of the vectors
@@ -140,4 +152,3 @@ class JaroWinklerDistance(SimilarityMetric):
             for x in value1
             for y in value2
         )
-

@@ -15,8 +15,8 @@ class ExactMatch(SimilarityMetric):
         Compares two values for exact match.
 
         Args:
-            value1:
-            value2:
+            value1: A list of values (corresponding to an entlet)
+            value2: Another list of values (corresponding to a presumably different entlet)
 
         Returns:
             (float) 1.0 if the values match exactly, 0.0 if not

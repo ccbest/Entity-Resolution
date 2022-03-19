@@ -1,7 +1,11 @@
+"""
+Module for
+"""
+
 import abc
 from collections import Counter
 from functools import reduce
-from typing import Callable, Dict, Generator, List, Optional, Tuple, Set
+from typing import Dict, Generator, List, Optional, Tuple, Set
 
 import pandas as pd
 
@@ -17,14 +21,21 @@ class ReverseIndexBlocker(Blocker):
     """
     Mixin for blockers that block based on the creation of a reverse index.
 
+    Uses some logic (determined by which child blocker is used) to bucket entlets
+    by their shared underlying values
     """
 
-    def __init__(self, fields: List[str], fingerprint_fn: Callable, threshold: float):
+    transform: Optional[ColumnarTransform]
+
+    def __init__(self, fields: List[str], threshold: float):
         self.fields = fields
-        self.fingerprint_fn = fingerprint_fn
         self.threshold = threshold
 
-    def fingerprint(self, entlet: Entlet) -> Dict[str, Set[str]]:
+    @abc.abstractmethod
+    def fingerprint(self, value: str) -> Set[str]:
+        pass
+
+    def _fingerprint(self, entlet: Entlet) -> Dict[str, Set[str]]:
         """
         Creates the fingerprint for a given entlet on a per-field basis.
 
@@ -35,7 +46,7 @@ class ReverseIndexBlocker(Blocker):
             { <field name> : set( bucket ) }
         """
         return {
-            field: set(self.fingerprint_fn(value))
+            field: set(self.fingerprint(value))
             for field in self.fields
             for value in entlet.get(field, [])
         }
@@ -95,20 +106,34 @@ class ReverseIndexBlocker(Blocker):
         )
         return reduce(merge_union, predicated)
 
-    def block(self, entlet_df: pd.DataFrame) -> Generator[Tuple[str, str], None, None]:
-        entlet_df['fingerprint'] = entlet_df['entlet'].map(self.fingerprint)
+    def block(
+            self,
+            entlet_df: pd.DataFrame
+    ) -> Generator[Tuple[str, str], None, None]:
+        """
+        Blocks by creating a reverse index and determining overlap.
+
+        Args:
+            entlet_df (pd.DataFrame): A single-column dataframe of entlet objects
+
+        Returns:
+
+        """
+
+        entlet_df['fingerprint'] = entlet_df['entlet'].map(self._fingerprint)
 
         reverse_index = self.create_reverse_index(entlet_df)
         index = self.create_index(entlet_df)
 
         # keeps track of entlets we've seen, makes sure combinations (not permutations)
         # are produced
-        matched = set()
+        # This blocker is not symmetrical, so need to keep track of the combination pairs
+        matched = {}
 
         for field in self.fields:
 
             for entlet_id, predicates in index[field].items():
-                matched.add(entlet_id)
+                matched[entlet_id] = set()
 
                 # count of times each alternate entlet id appears in this
                 # entlet's predicates
@@ -116,10 +141,11 @@ class ReverseIndexBlocker(Blocker):
                     ent_id for predicate in predicates for ent_id in reverse_index[field][predicate]
                 )
                 for match_id, count in counter.items():
-                    if match_id in matched:
+                    if match_id in matched and entlet_id in matched[match_id]:
                         continue
 
                     if count / len(predicates) >= self.threshold:
+                        matched[entlet_id].add(match_id)
                         yield entlet_id, match_id
 
 
@@ -128,8 +154,8 @@ class QGramBlocker(ReverseIndexBlocker):
     """
     Blocks string values based on Q-Grams (n-length character subsets of the strings).
 
-    Accepts fields with the following datatypes:
-      - string
+    Additional dependencies required:
+        - nltk
 
     """
 
@@ -142,39 +168,54 @@ class QGramBlocker(ReverseIndexBlocker):
             transforms: Optional[List[ColumnarTransform]] = None,
             threshold: float = 0.5
     ):
-        super().__init__(fields, self.fingerprint_string, threshold)
+        super().__init__(fields, threshold)
 
         self.q = q
         self.transforms = transforms
 
-    def fingerprint_string(self, value: str) -> Set[str]:
+    def fingerprint(self, value: str) -> Set[str]:
         return {value[i:i+self.q] for i in range(len(value) - self.q + 1)}
 
 
 class SyllableBlocker(ReverseIndexBlocker):
 
     """
-    Blocks string values based on expressed syllables in the text (n-length character subsets of the strings).
+    Blocks string values based on expressed syllables in the text (n-length
+    character subsets of the strings).
 
-    Accepts fields with the following datatypes:
-      - string
-
+    Additional dependencies required:
+        - nltk
     """
 
     ACCEPTS = {str}
 
-    def __init__(self, fields: List[str], transforms: List[ColumnarTransform], threshold: float = None):
+    def __init__(
+            self,
+            fields: List[str],
+            transforms: Optional[ColumnarTransform],
+            threshold: float = None
+    ):
         from nltk.tokenize.legality_principle import LegalitySyllableTokenizer
         from nltk.corpus import words
 
-        super().__init__(fields, self.fingerprint_string, threshold)
+        super().__init__(fields, threshold)
 
         self.tokenizer = LegalitySyllableTokenizer(words.words())
 
         self.fields = fields
         self.transforms = transforms
 
-    def fingerprint_string(self, value: str) -> Set[str]:
+    def fingerprint(self, value: str) -> Set[str]:
+        """
+        Tokenizes a string by individual words. For additional information, reference
+        NLTK's documentation for `nltk.tokenize.word_tokenize`.
+
+        Args:
+            value (str): A string of text containing one or more words
+
+        Returns:
+            (set) a unique list of words in the text
+        """
         from nltk.tokenize import word_tokenize
 
         return {

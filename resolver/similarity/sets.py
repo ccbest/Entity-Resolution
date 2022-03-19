@@ -15,8 +15,8 @@ class JaccardSimilarity(SimilarityMetric):
         Computes the Jaccard similarity between 2 sets.
 
         Args:
-            entlet1:
-            entlet2:
+            value1: A list of values (corresponding to an entlet)
+            value2: Another list of values (corresponding to a presumably different entlet)
 
         Returns:
             (float) the Jaccard similarity of the sets

@@ -12,14 +12,14 @@ BLOCKER_RETURN = Generator[Tuple[str, str], None, None]
 
 class Blocker(abc.ABC):
 
-    @abc.abstractmethod
-    def __init__(self, field: str):
-        self.field = field
+    field: str
 
     @abc.abstractmethod
     def block(self, entlet_df: pd.DataFrame) -> Generator[Tuple[str, str], None, None]:
         """
-        Executes the blocking logic against a DataFrame
+        Primary execution method for a Blocker object. Takes a series of entlets, executes
+        some logic (depending on the blocker used), and returns pairs of entlet ids that were
+        blocked together.
 
         Args:
             entlet_df (pandas.DataFrame): A pandas Dataframe with one column (the entlet objects)
@@ -36,10 +36,6 @@ class ColumnarTransform(abc.ABC):
     def __init__(self, **kwargs):
         self.kwargs: Dict[str, Any] = kwargs
         self.wrapped_transform: Optional[ColumnarTransform] = None
-
-    @abc.abstractmethod
-    def __hash__(self) -> Hashable:
-        pass
 
     @abc.abstractmethod
     def transform(self, values_df: pd.DataFrame) -> pd.DataFrame:
@@ -82,7 +78,6 @@ class ScoringReducer(abc.ABC):
 
         """
         pass
-
 
 
 class StandardizationTransform(abc.ABC):
@@ -168,7 +163,20 @@ class SimilarityMetric(abc.ABC):
         self.transformed_values = _dataframe_to_dict(self.applied_transform.transform(value_df))
 
     def score(self, entlet1: Entlet, entlet2: Entlet) -> float:
+        """
+        Wrapper around the .run() method to make sure the right values get passed to
+        the actual scoring method (accomodates transforms).
 
+        This method only scores the similarity of two entlets across a single field,
+        not the overall similarity as defined by the Strategy.
+
+        Args:
+            entlet1: An entlet object
+            entlet2: Another (presumably different) entlet object
+
+        Returns:
+            (float) the resulting similarity score
+        """
         return self.run(
             self.transformed_values.get(entlet1.entlet_id, []),
             self.transformed_values.get(entlet2.entlet_id, [])
@@ -177,15 +185,14 @@ class SimilarityMetric(abc.ABC):
     @abc.abstractmethod
     def run(self, value1: List[Any], value2: List[Any]) -> float:
         """
-        Abstract method for a similarity metric's run method. The method must
-        accept two fragments and return a float denoting the similarity of the two
-        fragments.
+        Executes the actual similarity scoring against two values. Virtually all
+        values on an entlet
 
         Args:
             value1:
             value2:
 
         Returns:
-
+            (float) the measured similarity
         """
         pass
