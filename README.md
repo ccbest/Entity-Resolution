@@ -1,34 +1,45 @@
 # ResolvER
-## Distributed Entity Resolution
-ResolvER is a fully-distributed Entity Resolution engine designed to merge any number of disparate 
-datasets into one coherent picture.
 
-### What is Entity Resolution?
-Entity Resolution is the process of de-duplicating records from different sources that are representative 
-of the same thing, even when no shared key exists between them, and merging the results into a single, 
-complex data structure. In other words, you no longer have to execute page-long joins to bring all of your
-data under one hood - all data relevant to the record you need is stored on a single document.
+ResolvER is an extensible framework for building Entity Resolution pipelines in order to merge datasets around "things" based on complex join logic and transitive linking.
 
-Traditionally, this process has involved exorbitant investments in data preparation and standardization, 
-exponentially-increasing runtime complexities based on the size of the data, and difficult-to-consume
-results that require intimate knowledge of the process's inner workings. These are the issues that ResolvER
-aims to solve.
+Entity Resolution is a complex and computationally expensive process. ResolvER seeks to provide tools that cover the majority of use cases, the ability to enhance those tools with machine learning, and leverage developers' experiential knowledge of data to provide a flexible and efficient solution to the Entity Resolution problem.
 
-ResolvER offers a template object (the Entlet) that reduces the barrier to entry down to the beginner-python 
-level, flexible configuration and verbose feedback to give the developers full control over the 
-resolution process, and drivers for pushing results to the database of your choice (in development).
+## Quick/Simple Example
+The University of Leipzig provides [test datasets](https://dbs.uni-leipzig.de/research/projects/object_matching/benchmark_datasets_for_entity_resolution) for Entity Resolution, let's say you're working with the DBLP-ACM dataset.
 
-### How does Entity Resolution work?
+The dataset provides two files, both describing published papers, with similar columns:
+* A unique id (unique to that file only)
+* A title
+* A list of authors
+* A venue
+* A year
+
+The titles vary slightly between files, and different authors may be listed for a given paper - in short, there's no clean or consistent way to deduplicate the data.
+
+Using ResolvER, you can specify any number of complex operations to determine whether two given records are duplicates of each other in what are called "Strategies." One such strategy may be:
+* `title` has Levenshtein ratio of at least 0.9 AND
+* `authors` has Jaccard distance of at least 0.4 AND
+* `year` is an exact match
+
+## In Depth examples
+For more in depth workflows and explanations of the methodology, reference the [notebooks](./notebooks) folder.
+
+## Install
+Install the latest version of ResolvER:
+```shell
+$ pip install py-resolver 
+```
+
+## Research
+ResolvER is (most notably) inspired by the below publications:
+* [Collective Entity Resolution in Relational Data](https://www.norc.org/pdfs/may%202011%20personal%20validation%20and%20entity%20resolution%20conference/collective%20entity%20resolution%20in%20relational%20data_pverconf_may2011.pdf)
+* [Comparative Analysis of Approximate
+Blocking Techniques for Entity Resolution](http://www.vldb.org/pvldb/vol9/p684-papadakis.pdf)
 
 
-## Getting Started
-Requirements for running a pipeline can be summarized in two points:
-1. You must write a fetcher/parser that converts your data into Entlet objects
-2. You must provide "strategies" for resolution that act as deduplication rulesets
-
-#### 1. Writing a parser
-<i>Note: many helpers are included for this stage. Refer to [XXXXXX] for more information.
-
-
-#### 2. Creating resolution strategies
-
+## License
+Released under standard MIT license (see LICENSE.txt):
+```
+Copyright (c) 2021 ResolvER Developers
+Carl Best
+```
