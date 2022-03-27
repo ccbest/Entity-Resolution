@@ -1,7 +1,7 @@
 
 from typing import Any, List, Optional
 
-from resolver._base import ColumnarTransform, SimilarityMetric
+from entity_resolution._base import ColumnarTransform, SimilarityMetric
 
 
 class ExactMatch(SimilarityMetric):

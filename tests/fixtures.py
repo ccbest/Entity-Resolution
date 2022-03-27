@@ -2,7 +2,7 @@ import pytest
 
 import pandas as pd
 
-from resolver import Entlet, EntletMap
+from entity_resolution import Entlet, EntletMap
 
 Entlet.define_source_uid_field("id")
 

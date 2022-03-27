@@ -4,7 +4,7 @@ from typing import Any, Dict, Generator, Hashable, List, Optional, Tuple
 
 import pandas as pd
 
-from resolver import Entlet
+from entity_resolution import Entlet
 
 
 BLOCKER_RETURN = Generator[Tuple[str, str], None, None]

@@ -7,7 +7,7 @@ import itertools
 import json
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
 
-from resolver._functions import merge_union
+from entity_resolution._functions import merge_union
 
 # TODO: Values should have their type stored in the class for checking to avoid collisions
 # TODO: Deduplication of values could be moved to post-munge for efficiency

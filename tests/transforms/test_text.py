@@ -1,6 +1,6 @@
 import pandas as pd
 
-from resolver.transforms.text import *
+from entity_resolution.transforms.text import *
 
 from tests.transforms import values_df
 

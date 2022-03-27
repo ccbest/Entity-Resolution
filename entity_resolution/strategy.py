@@ -4,8 +4,8 @@ from typing import Collection, Generator, Optional, Tuple
 
 import pandas as pd
 
-from resolver import EntletMap, Filter
-from resolver._base import Blocker, ScoringReducer, SimilarityMetric
+from entity_resolution import EntletMap, Filter
+from entity_resolution._base import Blocker, ScoringReducer, SimilarityMetric
 
 
 class Strategy:

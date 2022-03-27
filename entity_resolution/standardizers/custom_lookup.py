@@ -2,8 +2,8 @@
 import csv
 from typing import Dict, List
 
-from resolver import Entlet
-from resolver._base import StandardizationTransform
+from entity_resolution import Entlet
+from entity_resolution._base import StandardizationTransform
 from . import RESOURCES
 
 

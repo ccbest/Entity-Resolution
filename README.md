@@ -4,6 +4,9 @@ ResolvER is an extensible framework for building Entity Resolution pipelines in 
 
 Entity Resolution is a complex and computationally expensive process. ResolvER seeks to provide tools that cover the majority of use cases, the ability to enhance those tools with machine learning, and leverage developers' experiential knowledge of data to provide a flexible and efficient solution to the Entity Resolution problem.
 
+__Disclaimer: This package is in a pre-1.0 state. Although every effort will be made to limit changes to the API, and any changes made
+will be documented, there is no guarantee of API stability across versions.__
+
 ## Quick/Simple Example
 The University of Leipzig provides [test datasets](https://dbs.uni-leipzig.de/research/projects/object_matching/benchmark_datasets_for_entity_resolution) for Entity Resolution, let's say you're working with the DBLP-ACM dataset.
 
@@ -27,7 +30,7 @@ For more in depth workflows and explanations of the methodology, reference the [
 ## Install
 Install the latest version of ResolvER:
 ```shell
-$ pip install py-resolver 
+$ pip install py-entity_resolution 
 ```
 
 ## Research

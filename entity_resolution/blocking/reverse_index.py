@@ -9,9 +9,9 @@ from typing import Dict, Generator, List, Optional, Tuple, Set
 
 import pandas as pd
 
-from resolver import Entlet
-from resolver._base import Blocker, ColumnarTransform
-from resolver._functions import merge_union
+from entity_resolution import Entlet
+from entity_resolution._base import Blocker, ColumnarTransform
+from entity_resolution._functions import merge_union
 
 
 _INDEX = Dict[str, Dict[str, Set[str]]]

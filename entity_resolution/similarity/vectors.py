@@ -4,7 +4,7 @@ from typing import Any, List, Optional
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.spatial.distance import euclidean
 
-from resolver._base import ColumnarTransform, SimilarityMetric
+from entity_resolution._base import ColumnarTransform, SimilarityMetric
 
 
 class CosineSimilarity(SimilarityMetric):

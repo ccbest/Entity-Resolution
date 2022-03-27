@@ -4,7 +4,7 @@ from typing import List, MutableMapping, Iterator
 
 import pandas as pd
 
-from resolver import Entlet
+from entity_resolution import Entlet
 
 
 class EntletMap(MutableMapping):
