@@ -1,3 +1,7 @@
+"""
+Module for blockers that operate via sorting the underlying values
+"""
+
 import abc
 from typing import Any, List, Tuple
 

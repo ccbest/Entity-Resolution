@@ -1,4 +1,6 @@
-
+"""
+Module for comparing vectors
+"""
 from typing import Any, List, Optional
 
 from sklearn.metrics.pairwise import cosine_similarity

@@ -1,4 +1,10 @@
-
+"""
+Defines whatever complex logic is necessary to determine whether two entlets
+should be considered the same or not. Any number of comparisons can be defined
+(e.g. 'name exact match' and 'birth date within X days' and ....), and the resulting
+scores of each comparator will be passed to the ScoringReducer, which will determine
+a singular score to compare against a minimum threshold.
+"""
 
 from typing import Collection, Generator, Optional, Tuple
 
