@@ -23,7 +23,7 @@ class EntletMap(MutableMapping):
         self._strategies = []
 
     def __repr__(self):
-        return f"<resolver.EntletMap {len(self.entlets)} entlets>"
+        return f"<entity_resolution.EntletMap {len(self.entlets)} entlets>"
 
     def __setitem__(self, k: str, v: Entlet) -> None:
         """
