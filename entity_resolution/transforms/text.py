@@ -1,4 +1,6 @@
-
+"""
+Module for transforming strings
+"""
 from typing import Optional
 
 import pandas as pd

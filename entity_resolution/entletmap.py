@@ -1,4 +1,7 @@
-
+"""
+Module for the entletmap, which acts as the primary store of entlets
+that will be passed to a pipeline
+"""
 from __future__ import annotations
 from typing import List, MutableMapping, Iterator
 

@@ -1,4 +1,6 @@
-
+"""
+Module for comparing sets
+"""
 from typing import Any, List, Optional
 
 from entity_resolution._base import ColumnarTransform, SimilarityMetric

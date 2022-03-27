@@ -1,5 +1,5 @@
 """
-Module for
+Module for blockers that operate via a reverse index lookup
 """
 
 import abc

@@ -1,4 +1,8 @@
+"""
+Module for defining filters that can be passed to various pipeline objects.
 
+TODO: not currently used anywhere, determining whether this is worth keeping
+"""
 from typing import Any, Callable
 
 

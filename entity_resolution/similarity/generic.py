@@ -1,4 +1,6 @@
-
+"""
+Module for methods of comparing similarity that are datatype-agnostic
+"""
 from typing import Any, List, Optional
 
 from entity_resolution._base import ColumnarTransform, SimilarityMetric

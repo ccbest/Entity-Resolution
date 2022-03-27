@@ -1,3 +1,8 @@
+"""
+Pipeline module. Accepts various other objects in order to define a pipeline and
+then orchestrates the actual processing.
+"""
+
 from __future__ import annotations
 
 from functools import reduce
