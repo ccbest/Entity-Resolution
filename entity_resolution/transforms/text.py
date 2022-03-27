@@ -4,7 +4,7 @@ from typing import Optional
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from resolver._base import ColumnarTransform
+from entity_resolution._base import ColumnarTransform
 
 
 class TfIdfTokenizedVector(ColumnarTransform):

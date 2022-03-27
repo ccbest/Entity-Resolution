@@ -7,9 +7,9 @@ from typing import Collection, List
 import networkx as nx
 import pandas as pd
 
-from resolver import EntletMap, Strategy
-from resolver._base import StandardizationTransform
-from resolver._functions import deduplicate_nested_structure, merge_union
+from entity_resolution import EntletMap, Strategy
+from entity_resolution._base import StandardizationTransform
+from entity_resolution._functions import deduplicate_nested_structure, merge_union
 
 
 class Pipeline:

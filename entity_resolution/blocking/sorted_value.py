@@ -3,7 +3,7 @@ from typing import Any, List, Tuple
 
 import pandas as pd
 
-from resolver._base import Blocker, BLOCKER_RETURN
+from entity_resolution._base import Blocker, BLOCKER_RETURN
 
 
 class SortedValueBlocker(Blocker, abc.ABC):

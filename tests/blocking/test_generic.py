@@ -3,7 +3,7 @@ from collections import Counter
 
 import pytest
 
-from resolver.blocking.generic import AllToAll
+from entity_resolution.blocking.generic import AllToAll
 
 from tests.fixtures import *
 

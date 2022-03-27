@@ -12,7 +12,7 @@ following element is one score of potentially many.
 
 import numpy as np
 
-from resolver._base import ScoringReducer
+from entity_resolution._base import ScoringReducer
 
 
 class VectorMagnitude(ScoringReducer):

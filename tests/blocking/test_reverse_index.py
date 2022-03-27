@@ -3,7 +3,7 @@ from collections import Counter
 
 import pytest
 
-from resolver.blocking.reverse_index import *
+from entity_resolution.blocking.reverse_index import *
 
 from tests.fixtures import *
 

@@ -5,7 +5,7 @@ from itertools import combinations
 
 import pandas as pd
 
-from resolver._base import Blocker, BLOCKER_RETURN
+from entity_resolution._base import Blocker, BLOCKER_RETURN
 
 
 class AllToAll(Blocker):
