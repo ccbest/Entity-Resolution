@@ -1,11 +1,32 @@
+"""Package build script"""
+import os
+import re
 import setuptools
+
+ver_file = f'entity_resolution{os.sep}_version.py'
+__version__ = None
+
+# Pull package version number from _version.py
+with open(ver_file, 'r') as f:
+    for line in f.readlines():
+        if re.match(r'^\s*#', line):  # comment
+            continue
+
+        ver_line = line
+        verstr = re.match(r"^.*=\s+'(v\d+\.\d+\.\d+(?:\.[a-zA-Z0-9]+)?)'", ver_line)
+        if verstr is not None and len(verstr.groups()) == 1:
+            __version__ = verstr.groups()[0]
+            break
+
+    if __version__ is None:
+        raise EnvironmentError(f'Could not find valid version number in {ver_file}; aborting setup')
 
 with open("./README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="entity-resolution",
-    version='v0.1.0',
+    version=__version__,
     author="Carl Best",
     author_email="",
     description="Extensible entity resolution framework",
