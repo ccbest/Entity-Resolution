@@ -14,7 +14,8 @@ from typing import Any, Callable, Dict, Generator, List, Optional, Union
 
 class Entlet(object):
     """
-    This class lets you build up information about an entlet and then output it into flattened fragments.
+    This class lets you build up information about an entlet and then output it into flattened
+    fragments.
 
     NOTE: the following fields are reserved
       - ent_type
@@ -112,10 +113,8 @@ class Entlet(object):
             2. sort and deduplicate the values
             3. join and hash the values
 
-        This will keep the entlet IDs stable between runs if the underlying information doesn't change.
-
-        inb4 "why hashing?" -DavaiSyka1@3 entlet ids enforce a consistent structure of {source}:{ent_type}:{uid}. Imagine
-        searching for (or having a url route for) a bunch of stringified json. Nightmares.
+        This will keep the entlet IDs stable between runs if the underlying information doesn't
+        change.
 
         Args:
             *args (str): The fields to use
@@ -129,16 +128,16 @@ class Entlet(object):
     @classmethod
     def define_source_uid_field(cls, field: str):
         """
-        Defines which field from a given source constitutes a unique id. This is the recommended way of
-        creating the entlet unique ID.
+        Defines which field from a given source constitutes a unique id. This is the recommended
+        way of creating the entlet unique ID.
 
-        Keep in mind that declaring a field in this way forces the field to become a single-value constant.
-        For example, if you declare the field "state_iso2" as the source uid field, you may only set the value
-        of field "state_iso2" once.
+        Keep in mind that declaring a field in this way forces the field to become a single-value
+        constant. For example, if you declare the field "state_iso2" as the source uid field, you
+        may only set the value of field "state_iso2" once.
 
         Example:
-        Say you have a record from the data source "US_STATES" and you're creating a "state" entity. The
-        record looks like:
+        Say you have a record from the data source "US_STATES" and you're creating a "state"
+        entity. The record looks like:
         {
             "state_iso2": "NY",
             "population": "a lot"
@@ -182,8 +181,8 @@ class Entlet(object):
 
     def _generate_entlet_id(self):
         """
-        Will create a "unique" entlet id based on supplied settings and store the resulting ID in self.values
-        under "entlet_id"
+        Will create a "unique" entlet id based on supplied settings and store the resulting ID in
+        self.values under "entlet_id"
 
         Returns:
             (self)
@@ -222,7 +221,10 @@ class Entlet(object):
         Returns:
             str
         """
-        uid_values = [self.values.get(field, None) for field in (*self.UID_FIELDS, self.SOURCE_UID_FIELD)]
+        uid_values = [
+            self.values.get(field, None)
+            for field in (*self.UID_FIELDS, self.SOURCE_UID_FIELD)
+        ]
         if not all(uid_values):
             missing = [field for field in self.UID_FIELDS if not self[field]]
             raise ValueError(f"Entlet is missing the following required fields: {missing}")
@@ -256,11 +258,17 @@ class Entlet(object):
     def get_recursive(self, obj: Union[Dict, str], key_parts: List[str]):
         """
         Permits dot-delimited key retrieval from loaded values.
-        The method used to store values is important to understand. Root values in self.values are converted
-        to lists containing the values passed. To illustrate, consider the following:
-        entlet.add({"test": "value"})
-        entlet.add({"test": "value2"})
-        entlet.values  ---> { "test": ["value", "value2" ] }
+        The method used to store values is important to understand. Root values in self.values are
+        converted to lists containing the values passed.
+
+        Examples:
+            ```python
+            >>> entlet = Entlet()
+            >>> entlet.add({"test": "value"})
+            >>> entlet.add({"test": "value2"})
+            >>> entlet.values
+            { "test": ["value", "value2" ] }
+            ```
         Example:
             If the config were equal to:
             {
@@ -292,13 +300,13 @@ class Entlet(object):
 
     def add(self, obj: Dict[str, Any]) -> Entlet:
         """
-        Add values to the Entlet instance. All entlet values (except special reserved fields - see below)
-        are stored in lists and their data structures are preserved - see below examples. Values passed
-        as a list will be unpacked.
+        Add values to the Entlet instance. All entlet values (except special reserved fields - see
+        below) are stored in lists and their data structures are preserved - see below examples.
+        Values passed as a list will be unpacked.
 
-        Reserved fields - fields that are used to generate the entlet_id via the define_source_uid_field
-        and define_individual_uid methods - are NOT stored as lists because values must be singular in order
-        to generate the id.
+        Reserved fields - fields that are used to generate the entlet_id via the
+        define_source_uid_field and define_individual_uid methods - are NOT stored as lists because
+        values must be singular in order to generate the id.
 
         Args:
             obj (Dict[str, Any])
@@ -390,8 +398,8 @@ class Entlet(object):
 
     def _set_const(self, obj):
         """
-        Workaround for python's lack of ability to set constant values. Ensures the entlet's constant values
-        don't get overwritten, which would indicate a problem with munge.
+        Workaround for python's lack of ability to set constant values. Ensures the entlet's
+        constant values don't get overwritten, which would indicate a problem with munge.
 
         Constant values are critical to producing an entlet_id, and so values must be strings.
 
@@ -439,11 +447,18 @@ class Entlet(object):
         scoped such that individual nested objects must pass the filter
 
         Args:
-            values (List[Any]): The list of data structures to be filtered
-            filter_field (str): The name of the field on the data structure whos value is being evaluated
-            filter_value (Any): The value that will be compared against the value provided by filter_field
-            filter_comparator (Callable): The function that will evaluate filter_value against the
-                                          the value provided by filter_field. Must return a boolean.
+            values:
+                The list of data structures to be filtered
+
+            filter_field:
+                The name of the field on the data structure whose value is being evaluated
+
+            filter_value:
+                The value that will be compared against the value provided by filter_field
+
+            filter_comparator:
+                The function that will evaluate filter_value against the value provided by
+                filter_field. Must return a boolean.
 
         Returns:
             List[Any] The same list passed to the 'values' param, reduced to only those which passed
@@ -536,9 +551,12 @@ class Entlet(object):
         "iso2", because those values don't exist together in the same nested object.
 
         Args:
-            obj (dict): (values must be lists)
-            field_names (set): the fields used in ER (formatted as "{field}.{subfield}"). Unused subfields
-                              will be removed.
+            obj:
+                A dictionary
+
+            field_names:
+                the fields used in ER (formatted as "{field}.{subfield}"). Unused subfields will
+                be removed.
 
         Returns:
             (Generator[List[Dict]]) The fragments created.
@@ -558,8 +576,12 @@ class Entlet(object):
                 # dicts can't be hashed, so dump them to a json string
                 obj_non_empty[field] = [json.dumps(val) for val in value]
 
-        multiplied = [dict(zip(obj_non_empty.keys(), item))
-                      for item in list(itertools.product(*[values for key, values in obj_non_empty.items()]))]
+        multiplied = [
+            dict(zip(obj_non_empty.keys(), item))
+            for item in list(
+                itertools.product(*[values for key, values in obj_non_empty.items()])
+            )
+        ]
 
         # break nested fields back out
         for frag in [{**obj_empty, **item} for item in multiplied]:
@@ -619,8 +641,6 @@ class Entlet(object):
     def is_subset(self, other_entlet):
         """ Useful for unit tests, check if an entlet contains all the values of another """
         for group_name, attr_groups in self.values.items():
-            # If a group type is missing, then not a subset.  Currently requiring groups to line up even though they
-            # have no bearing on the final frags/entlet
             if group_name not in other_entlet.values:
                 return False
 
@@ -643,4 +663,3 @@ class Entlet(object):
                 return False
 
         return True
-

@@ -7,13 +7,11 @@ from __future__ import annotations
 
 from functools import reduce
 import hashlib
-from typing import Collection, List
+from typing import Collection
 
 import networkx as nx
-import pandas as pd
 
 from entity_resolution import EntletMap, Strategy
-from entity_resolution._base import StandardizationTransform
 from entity_resolution._functions import deduplicate_nested_structure, merge_union
 
 
