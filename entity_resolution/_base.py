@@ -1,6 +1,6 @@
 import abc
 from collections import defaultdict
-from typing import Any, Dict, Generator, Hashable, List, Optional, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 import pandas as pd
 
@@ -97,8 +97,9 @@ class SimilarityMetric(abc.ABC):
 
     def transform(self, entlet_df: pd.DataFrame) -> None:
         """
-        Run all specified transforms in sequence. The transforms will append columns to the dataframe,
-        so be sure to obtain the final field name using the .get_transformed_field_name property.
+        Run all specified transforms in sequence. The transforms will append columns to the
+        dataframe, so be sure to obtain the final field name using the .get_transformed_field_name
+        property.
 
         Args:
             entlet_df (DataFrame): A dataframe of entlets
