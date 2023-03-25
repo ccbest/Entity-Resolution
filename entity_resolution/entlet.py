@@ -14,7 +14,8 @@ from typing import Any, Callable, Dict, Generator, List, Optional, Set, Union
 
 class Entlet(object):
     """
-    This class lets you build up information about an entlet and then output it into flattened fragments.
+    This class lets you build up information about an entlet and then output it into flattened
+    fragments.
 
     NOTE: the following fields are reserved
       - ent_type
@@ -151,7 +152,8 @@ class Entlet(object):
             2. sort and deduplicate the values
             3. join and hash the values
 
-        This will keep the entlet IDs stable between runs if the underlying information doesn't change.
+        This will keep the entlet IDs stable between runs if the underlying information doesn't
+        change.
 
         Args:
             *args (str): The fields to use
@@ -176,16 +178,16 @@ class Entlet(object):
         """
         Mutative.
 
-        Defines which field from a given source constitutes a unique id. This is the recommended way of
-        creating the entlet unique ID.
+        Defines which field from a given source constitutes a unique id. This is the recommended
+        way of creating the entlet unique ID.
 
-        Keep in mind that declaring a field in this way forces the field to become a single-value constant.
-        For example, if you declare the field "state_iso2" as the source uid field, you may only set the value
-        of field "state_iso2" once.
+        Keep in mind that declaring a field in this way forces the field to become a single-value
+        constant. For example, if you declare the field "state_iso2" as the source uid field, you
+        may only set the value of field "state_iso2" once.
 
         Example:
-        Say you have a record from the data source "US_STATES" and you're creating a "state" entity. The
-        record looks like:
+        Say you have a record from the data source "US_STATES" and you're creating a "state" entity.
+        The record looks like:
         {
             "state_iso2": "NY",
             "population": "a lot"
@@ -241,8 +243,8 @@ class Entlet(object):
     def _generate_entlet_id(self):
         """
 
-        Will create a "unique" entlet id based on supplied settings and store the resulting ID in self.values
-        under "entlet_id"
+        Will create a "unique" entlet id based on supplied settings and store the resulting ID in
+        self.values under "entlet_id"
 
         Returns:
             (self)
@@ -309,7 +311,11 @@ class Entlet(object):
         Returns:
             (str) the generated id
         """
-        uid_values = [val for field in self.CUSTOM_UID_FIELDS[self.data_source] for val in self.get(field, [])]
+        uid_values = [
+            val
+            for field in self.CUSTOM_UID_FIELDS[self.data_source]
+            for val in self.get(field, [])
+        ]
         custom_values = [self._values.get(value, None) for value in self.CUSTOM_UID_FIELDS]
 
         hashed_custom_values = md5(
@@ -322,8 +328,8 @@ class Entlet(object):
     def get_recursive(self, obj: Union[Dict, str], key_parts: List[str]):
         """
         Permits dot-delimited key retrieval from loaded values.
-        The method used to store values is important to understand. Root values in self.values are converted
-        to lists containing the values passed. To illustrate, consider the following:
+        The method used to store values is important to understand. Root values in self.values are
+        converted to lists containing the values passed. To illustrate, consider the following:
         entlet.add({"test": "value"})
         entlet.add({"test": "value2"})
         entlet.values  ---> { "test": ["value", "value2" ] }
@@ -358,13 +364,13 @@ class Entlet(object):
 
     def add(self, obj: Dict[str, Any]) -> Entlet:
         """
-        Add values to the Entlet instance. All entlet values (except special reserved fields - see below)
-        are stored in lists and their data structures are preserved - see below examples. Values passed
-        as a list will be unpacked.
+        Add values to the Entlet instance. All entlet values (except special reserved fields - see
+        below) are stored in lists and their data structures are preserved - see below examples.
+        Values passed as a list will be unpacked.
 
-        Reserved fields - fields that are used to generate the entlet_id via the define_source_uid_field
-        and define_individual_uid methods - are NOT stored as lists because values must be singular in order
-        to generate the id.
+        Reserved fields - fields that are used to generate the entlet_id via the
+        define_source_uid_field and define_individual_uid methods - are NOT stored as lists because
+        values must be singular in order to generate the id.
 
         Args:
             obj (Dict[str, Any])
@@ -465,8 +471,8 @@ class Entlet(object):
 
     def _set_const(self, obj):
         """
-        Workaround for python's lack of ability to set constant values. Ensures the entlet's constant values
-        don't get overwritten, which would indicate a problem with munge.
+        Workaround for python's lack of ability to set constant values. Ensures the entlet's
+        constant values don't get overwritten, which would indicate a problem with munge.
 
         Constant values are critical to producing an entlet_id, and so values must be strings.
 
@@ -522,92 +528,6 @@ class Entlet(object):
 
         return _entlet.add(entlet.dump())
 
-    def standardize_values(
-            self,
-            standardization_field: str,
-            filter_rulesets: List[Dict[str, Union[str, Callable]]],
-            standardization_function: Callable
-    ) -> Entlet:
-        """
-        Substitutes values for their standardized counterparts. Values that are substituted get moved
-        to a new '{field_name}_raw' field.
-
-        **IMPORTANT**
-        Standardization can be either scoped or "global" based on applied filters
-
-        Filters must follow the below data structure:
-        {
-            "field_name": the name of the field
-            "comparator": a callable that accepts a two arguments,
-            "values": ...one or more values...
-        }
-
-        Args:
-            standardization_field (str): The name of the field to be standardized
-            filter_rulesets (List[Dict]: See above.
-            standardization_function (Callable): The function by which to compare the value on the
-                                                 entlet versus the value supplied by the filter_value
-                                                 parameter.
-
-        Returns:
-            (self) The same entlet instance, with the standardization rule applied.
-        """
-        if standardization_field not in self:
-            return self
-
-        root_field = standardization_field.split('.', 1)[0]
-
-        # Global filters are applied against root fields other than the value being standardized
-        # e.g., standardizing 'state' but applying a filter against 'country'
-        global_filters = [fltr for fltr in filter_rulesets if fltr['field_name'].split('.', 1)[0] != root_field]
-        for global_filter in global_filters:
-            # All global filters must pass in order for standardization to occur
-            if not self._test_global_filter(**global_filter):
-                return self
-
-        # Scoped filters are applied against fields in the same scope as the values being standardized
-        # e.g., standardizing 'state.iso2' but applying a filter against 'state.type'
-        scoped_filters = [fltr for fltr in filter_rulesets if fltr['field_name'].split('.', 1)[0] == root_field]
-        values = self[root_field]
-        for scoped_filter in scoped_filters:
-            # Whittle down the list of values by applying filters in sequence
-            values = self._apply_scoped_filter(
-                values,
-                scoped_filter["field_name"],
-                scoped_filter["value"],
-                scoped_filter["comparator"]
-            )
-
-        # TODO: Refactor. Seems to work for now but i don't know how
-        for value in values.copy():
-            if isinstance(value, dict):
-                original_value = self.get_recursive(value, standardization_field.split('.')[1:])
-            else:
-                original_value = value
-
-            standardized_value = standardization_function(original_value)
-
-            # If the field is nested, we add a {field}_raw field on to the nested object
-            if isinstance(value, dict):
-                parent_of_value = self.get_recursive(
-                    value,
-                    standardization_field.split('.')[1:-1]
-                )
-                parent_of_value.update({
-                    f"{standardization_field.split('.')[-1]}_raw": original_value,
-                    standardization_field.split('.')[-1]: standardized_value
-                })
-                continue
-
-            # If the field isn't nested, the old values get pushed to a new root field
-            self[standardization_field].remove(original_value)
-            self.add({
-                standardization_field: standardized_value,
-                f"{standardization_field}_raw": original_value
-            })
-
-        return self
-
     def _apply_scoped_filter(
             self,
             values: List[Any],
@@ -622,11 +542,15 @@ class Entlet(object):
         scoped such that individual nested objects must pass the filter
 
         Args:
-            values (List[Any]): The list of data structures to be filtered
-            filter_field (str): The name of the field on the data structure whos value is being evaluated
-            filter_value (Any): The value that will be compared against the value provided by filter_field
-            filter_comparator (Callable): The function that will evaluate filter_value against the
-                                          the value provided by filter_field. Must return a boolean.
+            values:
+                The list of data structures to be filtered
+            filter_field:
+                The name of the field on the data structure whos value is being evaluated
+            filter_value:
+                The value that will be compared against the value provided by filter_field
+            filter_comparator:
+                The function that will evaluate filter_value against the value provided by
+                filter_field. Must return a boolean.
 
         Returns:
             List[Any] The same list passed to the 'values' param, reduced to only those which passed
@@ -720,8 +644,9 @@ class Entlet(object):
 
         Args:
             obj (dict): (values must be lists)
-            field_names (set): the fields used in ER (formatted as "{field}.{subfield}"). Unused subfields
-                              will be removed.
+            field_names (set):
+                the fields used in ER (formatted as "{field}.{subfield}"). Unused subfields will
+                be removed.
 
         Returns:
             (Generator[List[Dict]]) The fragments created.
@@ -741,8 +666,10 @@ class Entlet(object):
                 # dicts can't be hashed, so dump them to a json string
                 obj_non_empty[field] = [json.dumps(val) for val in value]
 
-        multiplied = [dict(zip(obj_non_empty.keys(), item))
-                      for item in list(itertools.product(*[values for key, values in obj_non_empty.items()]))]
+        multiplied = [
+            dict(zip(obj_non_empty.keys(), item))
+            for item in list(itertools.product(*[values for key, values in obj_non_empty.items()]))
+        ]
 
         # break nested fields back out
         for frag in [{**obj_empty, **item} for item in multiplied]:
@@ -802,8 +729,8 @@ class Entlet(object):
     def is_subset(self, other_entlet):
         """ Useful for unit tests, check if an entlet contains all the values of another """
         for group_name, attr_groups in self._values.items():
-            # If a group type is missing, then not a subset.  Currently requiring groups to line up even though they
-            # have no bearing on the final frags/entlet
+            # If a group type is missing, then not a subset. Currently requiring groups to line
+            # up even though they have no bearing on the final frags/entlet
             if group_name not in other_entlet.values:
                 return False
 
@@ -826,4 +753,3 @@ class Entlet(object):
                 return False
 
         return True
-
