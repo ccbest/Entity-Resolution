@@ -17,39 +17,48 @@ class VectorMagnitude(ScoringReducer):
     Treats each score provided as a dimension of a vector and takes the
     resulting vector's magnitude
 
+    Args:
+        minimum:
+            The minimum vector magnitude the scores must equate to in order
+            for resolution to occur.
+
     """
-    def __init__(self, min, **kwargs):
-        self.min = min
-        self.kwargs = kwargs
+    def __init__(self, minimum, **_):
+        self.minimum = minimum
 
     def __call__(self, *args):
-        return np.linalg.norm(np.array(args)) > self.min
+        return np.linalg.norm(np.array(args)) > self.minimum
 
 
 class Sum(ScoringReducer):
     """
-    Treats each score provided as a dimension of a vector and takes the
-    resulting vector's magnitude
+    Sums the various scores together and compares against a threshold
+
+    Args:
+        minimum:
+            The minimum threshold which the scores must sum to in order for
+            resolution to occur.
 
     """
-    def __init__(self, min, **kwargs):
-        self.min = min
-        self.kwargs = kwargs
+    def __init__(self, minimum, **_):
+        self.minimum = minimum
 
     def __call__(self, *args):
-        return sum(args) > self.min
+        return sum(args) > self.minimum
 
 
 class Product(ScoringReducer):
     """
-    Treats each score provided as a dimension of a vector and takes the
-    resulting vector's magnitude
+    Multiplies the various scores together and compares against a threshold
 
+    Args:
+        minimum:
+            The minimum threshold which the scores must multiply to in order for
+            resolution to occur.
     """
 
-    def __init__(self, min, **kwargs):
-        self.min = min
-        self.kwargs = kwargs
+    def __init__(self, minimum: float, **_):
+        self.minimum: float = minimum
 
     def __call__(self, *args):
-        return np.product(args) > self.min
+        return np.product(args) > self.minimum
