@@ -121,7 +121,6 @@ class ReverseIndexBlocker(Blocker):
         """
 
         entlet_df['fingerprint'] = entlet_df['entlet'].map(self._fingerprint)
-
         reverse_index = self.create_reverse_index(entlet_df)
         index = self.create_index(entlet_df)
 
@@ -138,7 +137,10 @@ class ReverseIndexBlocker(Blocker):
                 # count of times each alternate entlet id appears in this
                 # entlet's predicates
                 counter = Counter(
-                    ent_id for predicate in predicates for ent_id in reverse_index[field][predicate]
+                    ent_id
+                    for predicate in predicates
+                    for ent_id in reverse_index[field][predicate]
+                    if ent_id != entlet_id
                 )
                 for match_id, count in counter.items():
                     if match_id in matched and entlet_id in matched[match_id]:
