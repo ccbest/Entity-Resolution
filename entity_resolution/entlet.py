@@ -5,7 +5,7 @@ from copy import deepcopy
 from hashlib import md5
 import itertools
 import json
-from typing import Any, Callable, Dict, Generator, List, Optional, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Set, Union
 
 
 # TODO: Values should have their type stored in the class for checking to avoid collisions
@@ -22,33 +22,23 @@ class Entlet(object):
       - entlet_id
 
     """
-    UID_FIELDS = ['data_source', 'ent_type']
-
-    CUSTOM_UID_FIELDS = None
-    SOURCE_UID_FIELD = None
+    CUSTOM_UID_FIELDS = dict()
+    SOURCE_UID_FIELDS = dict()
 
     def __init__(self, initial: Optional[Dict[str, Any]] = None):
-        self.values = defaultdict(list)
 
-        self.fields = set()
-        self.const_values = {}
-
+        # "Special" properties
         self._uid = None
+        self._data_source = None
+        self._ent_type = None
+
+        self._const_values = {}
+        self._values = defaultdict(list)
 
         if initial is not None:
             self.add(initial)
 
-    @property
-    def required_fields(self) -> List[str]:
-        return [*self.UID_FIELDS, 'entlet_id']
-
-    @property
-    def entlet_id(self):
-        """Retrieves the entlet id. If this is the first time calling this property, will generate
-        the id and save it to the instance's const_values"""
-        return self.const_values.get("entlet_id", self._generate_entlet_id())
-
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> Any:
         """
         Retrieves a value stored on the entlet. Will search constants first (reserved for
         required fields).
@@ -59,26 +49,72 @@ class Entlet(object):
         Returns:
             (Any) The value of the last provided key
         """
-        if key in self.const_values:
-            return self.const_values[key]
+        if key in self._const_values:
+            return self._const_values[key]
 
-        return self.get_recursive(self.values, key.split('.'))
+        return self.get_recursive(self._values, key.split('.'))
 
-    def __repr__(self):
-        """ So we can easily see in the debugger """
-        attrs = ', '.join('{}={}'.format(k, v) for k, v in self.const_values.items())
-        return f'Entlet({attrs})'
+    def __repr__(self) -> str:
+        """REPL representation"""
+        return f'<Entlet(ent_type={self.ent_type}, ' \
+               f'data_source={self.data_source}, uid={self._uid})>'
 
-    def __contains__(self, o):
-        """Boolean check if key exists in .values"""
-        if self.const_values.__contains__(o):
+    def __contains__(self, o) -> bool:
+        """Boolean check if key exist"""
+        if self._const_values.__contains__(o):
             return True
 
         try:
-            self.get_recursive(self.values, o.split('.'))
+            self.get_recursive(self._values, o.split('.'))
             return True
         except KeyError:
             return False
+
+    def __eq__(self, other: Entlet) -> bool:
+        """Test equality"""
+        return self._values == other._values and self._const_values == other._const_values
+
+    @property
+    def required_fields(self) -> Set[str]:
+        fields = {'data_source', 'ent_type', 'entlet_id'}
+        if self.data_source and self.data_source in self.SOURCE_UID_FIELDS:
+            fields.add(self.SOURCE_UID_FIELDS[self.data_source])
+        return fields
+
+    @property
+    def data_source(self):
+        return self._data_source
+
+    @data_source.setter
+    def data_source(self, value: str):
+        if self._data_source:
+            raise ValueError(
+                'Data source cannot be overridden.'
+            )
+
+        self._data_source = value
+
+    @property
+    def ent_type(self):
+        return self._ent_type
+
+    @ent_type.setter
+    def ent_type(self, value: str):
+        if self._ent_type:
+            raise ValueError(
+                'Entity type cannot be overridden.'
+            )
+
+        self._ent_type = value
+
+    @property
+    def entlet_id(self) -> str:
+        """Retrieves the entlet id. If this is the first time calling this property, will generate
+        the id and save it to the instance's properties"""
+        if self._uid is None:
+            self._generate_entlet_id()
+
+        return self._uid
 
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -97,7 +133,7 @@ class Entlet(object):
         return default
 
     @classmethod
-    def define_custom_uid_fields(cls, *args):
+    def define_custom_uid_fields(cls, data_source: str, *args):
         """
         Defines a set of fields that will be used to create a custom id. Should be used only if
         the source of the entlet does not provide its own unique id.
@@ -122,12 +158,23 @@ class Entlet(object):
         Returns:
             (cls)
         """
-        cls.CUSTOM_UID_FIELDS = sorted(args)
-        return cls
+        if data_source in cls.SOURCE_UID_FIELDS:
+            raise ValueError(
+                "Cannot declare both custom fields and a source id field for a data source."
+            )
+
+        if data_source in cls.CUSTOM_UID_FIELDS and cls.CUSTOM_UID_FIELDS[data_source] != set(args):
+            raise ValueError(
+                "Custom UID fields already declared."
+            )
+
+        cls.CUSTOM_UID_FIELDS[data_source] = set(args)
 
     @classmethod
-    def define_source_uid_field(cls, field: str):
+    def define_source_uid_field(cls, data_source: str, field: str) -> None:
         """
+        Mutative.
+
         Defines which field from a given source constitutes a unique id. This is the recommended
         way of creating the entlet unique ID.
 
@@ -136,8 +183,8 @@ class Entlet(object):
         may only set the value of field "state_iso2" once.
 
         Example:
-        Say you have a record from the data source "US_STATES" and you're creating a "state"
-        entity. The record looks like:
+        Say you have a record from the data source "US_STATES" and you're creating a "state" entity.
+        The record looks like:
         {
             "state_iso2": "NY",
             "population": "a lot"
@@ -146,34 +193,45 @@ class Entlet(object):
             "US_STATES:state:NY"
 
         Args:
-            field: The name of the field that represents a source-provided unique ID.
+            data_source:
+                The name of the data source that the uid field is sourced from.
+
+            field:
+                The name of the field that represents a source-provided unique ID.
 
         Returns:
-            (cls)
+            None
         """
-        if cls.CUSTOM_UID_FIELDS:
-            raise ValueError("You cannot declare both custom fields and a source id field")
+        if data_source in cls.CUSTOM_UID_FIELDS:
+            raise ValueError(
+                "Cannot declare both custom fields and a source id field for a data source."
+            )
 
-        cls.SOURCE_UID_FIELD = field
-        return cls
+        if data_source in cls.SOURCE_UID_FIELDS and cls.SOURCE_UID_FIELDS[data_source] != field:
+            raise ValueError(
+                "Source UID field already declared."
+            )
 
-    def define_individual_uid(self, uid: str):
+        cls.SOURCE_UID_FIELDS[data_source] = field
+
+    def define_individual_uid(self, uid: str) -> Entlet:
         """
-        Hard set a particular value to a particular entlet's entlet_id.
+        Mutative.
+
+        Explicitly declare an id for this entlet. No other fields will be used in conjunction
+        with this entlet id.
 
         If you use this method it's recommended you take steps to ensure uniqueness across datasets.
-        Keep in mind that entlets with the same ID will be merged NO MATTER WHAT. So if you create
-        entlets from Source A with IDs auto-incremented from 1 and do the same for source B, you're
-        probably going to have a lot of strange resolutions (I'm not going to stop you from wasting
-        your own time).
+        Entlets with the same ID will be merged NO MATTER WHAT, meaning if you create entlets
+        from two sources and assign both the ID "example_id" they will be resolved together.
 
         Args:
             uid (str): The unique ID you are passing
 
         Returns:
-
+            Entlet
         """
-        if 'entlet_id' in self.const_values:
+        if self._uid:
             raise ValueError("An entlet id has already been declared.")
 
         self._uid = uid
@@ -181,6 +239,7 @@ class Entlet(object):
 
     def _generate_entlet_id(self):
         """
+
         Will create a "unique" entlet id based on supplied settings and store the resulting ID in
         self.values under "entlet_id"
 
@@ -188,31 +247,19 @@ class Entlet(object):
             (self)
         """
         if self._uid:
-            return self._generate_id_from_individual()
+            # ID already declared
+            return
 
-        # Preferred method, so considered first
-        if self.SOURCE_UID_FIELD:
+        if self.SOURCE_UID_FIELDS:
             return self._generate_id_from_source_field()
 
-        # Least preferred method, so considered last
         if self.CUSTOM_UID_FIELDS:
             return self._generate_id_from_custom_fields()
 
-        raise ValueError("Unable to generate entlet id. No id generation method has been "
-                         "specified for the entlet, nor has a custom id been provided.")
-
-    def _generate_id_from_individual(self):
-        """
-        Generates an entlet id from a unique id provided to the entlet instance
-        """
-        uid_values = [self.values.get(field, None) for field in self.UID_FIELDS]
-        if not all(uid_values):
-            missing = [field for field in self.UID_FIELDS if not self[field]]
-            raise ValueError(f"Entlet is missing the following required fields: {missing}")
-
-        uid = ':'.join([*uid_values, self._uid])
-        self.const_values["entlet_id"] = uid
-        return uid
+        raise ValueError(
+            "Unable to generate entlet id. No id generation method has been specified for the "
+            "entlet, nor has a custom id been provided."
+        )
 
     def _generate_id_from_source_field(self):
         """
@@ -221,17 +268,34 @@ class Entlet(object):
         Returns:
             str
         """
-        uid_values = [
-            self.values.get(field, None)
-            for field in (*self.UID_FIELDS, self.SOURCE_UID_FIELD)
-        ]
-        if not all(uid_values):
-            missing = [field for field in self.UID_FIELDS if not self[field]]
-            raise ValueError(f"Entlet is missing the following required fields: {missing}")
+        if not all([self.data_source, self.ent_type]):
+            missing = []
+            if not self.data_source:
+                missing.append('data_source')
+            if not self.ent_type:
+                missing.append('ent_type')
 
-        uid = ':'.join(uid_values)
-        self.const_values["entlet_id"] = uid
-        return uid
+            raise ValueError(
+                f"Entlet is missing the following required fields: {', '.join(missing)}"
+            )
+
+        _uid = self.get(self.SOURCE_UID_FIELDS[self.data_source])
+        if isinstance(_uid, list):
+            if len(_uid) > 1:
+                raise ValueError(
+                    'Entlet source-defined ID field assigned more than one value.'
+                )
+
+            if not _uid:
+                raise ValueError(
+                    'Entlet missing source-defined ID.'
+                )
+
+            self._values[self.SOURCE_UID_FIELDS[self.data_source]] = _uid[0]
+            _uid = _uid[0]
+
+        uid = ':'.join([self.ent_type, self.data_source, _uid])
+        self._uid = uid
 
     def _generate_id_from_custom_fields(self):
         """
@@ -244,31 +308,28 @@ class Entlet(object):
         Returns:
             (str) the generated id
         """
-        uid_values = [val for field in self.UID_FIELDS for val in self.get(field, [])]
-        custom_values = [self.values.get(value, None) for value in self.CUSTOM_UID_FIELDS]
+        uid_values = [
+            val
+            for field in self.CUSTOM_UID_FIELDS[self.data_source]
+            for val in self.get(field, [])
+        ]
+        custom_values = [self._values.get(value, None) for value in self.CUSTOM_UID_FIELDS]
 
         hashed_custom_values = md5(
             ''.join(sorted([str(val) for val in custom_values])).encode('utf-8')
         ).hexdigest()
 
         uid = ":".join([*uid_values, hashed_custom_values])
-        self.const_values["entlet_id"] = uid
-        return uid
+        self._uid = uid
 
     def get_recursive(self, obj: Union[Dict, str], key_parts: List[str]):
         """
         Permits dot-delimited key retrieval from loaded values.
         The method used to store values is important to understand. Root values in self.values are
-        converted to lists containing the values passed.
-
-        Examples:
-            ```python
-            >>> entlet = Entlet()
-            >>> entlet.add({"test": "value"})
-            >>> entlet.add({"test": "value2"})
-            >>> entlet.values
-            { "test": ["value", "value2" ] }
-            ```
+        converted to lists containing the values passed. To illustrate, consider the following:
+        entlet.add({"test": "value"})
+        entlet.add({"test": "value2"})
+        entlet.values  ---> { "test": ["value", "value2" ] }
         Example:
             If the config were equal to:
             {
@@ -380,19 +441,28 @@ class Entlet(object):
             if key == "entlet_id":
                 raise KeyError("You cannot use the .add() method to declare an entlet id.")
 
-            if key in self.required_fields or key == self.SOURCE_UID_FIELD:
-                self._set_const({key: obj[key]})
-                self.values[key] = obj[key]
+            if key == 'ent_type':
+                self.ent_type = obj[key]
                 continue
 
-            if key not in self.values or not self.values[key]:
+            if key == 'data_source':
+                self.data_source = obj[key]
+                continue
+
+            if key in self.required_fields:
+                self._set_const({key: obj[key]})
+                continue
+
+            if key not in self._values or not self._values[key]:
                 if isinstance(obj[key], list):
-                    self.values[key] += obj[key]
+                    self._values[key] += obj[key]
 
                 else:
-                    self.values[key].append(obj[key])
-            else:
-                merge_values(self.values[key], obj[key], key)
+                    self._values[key].append(obj[key])
+
+                continue
+
+            merge_values(self._values[key], obj[key], key)
 
         return self
 
@@ -409,7 +479,7 @@ class Entlet(object):
             obj: Key/value pairs to set as consts
         """
         for field, value in obj.items():
-            if self.const_values.get(field) and self.const_values.get(field) != value:
+            if self._const_values.get(field) and self._const_values.get(field) != value:
                 raise KeyError(f"Required field {field} is already assigned a value.")
 
             # Must be stringified in order to use
@@ -419,7 +489,7 @@ class Entlet(object):
                     "got {type(value)}."
                 )
 
-            self.const_values[field] = value
+            self._const_values[field] = value
 
     def dump(self) -> Dict[str, Union[list, str]]:
         """
@@ -429,9 +499,31 @@ class Entlet(object):
         Returns:
             Dict[str, Union[list, str]]
         """
-        values = deepcopy(dict(self.values))
-        values.update(self.const_values.copy())
+        values = deepcopy(dict(self._values))
+        values.update(self._const_values.copy())
         return values
+
+    def merge(self, entlet: Entlet, inplace: bool = False) -> Entlet:
+        """
+        Merges another entlet with this one. Only mutates this entlet if inplace is
+        False, otherwise a new Entlet object will be created with both value sets.
+
+        Args:
+            entlet:
+                An entlet
+
+            inplace:
+                If True, will mutate this object
+
+        Returns:
+            Entlet
+        """
+        if inplace:
+            _entlet = self
+        else:
+            _entlet = Entlet(initial=self.dump())
+
+        return _entlet.add(entlet.dump())
 
     def _apply_scoped_filter(
             self,
@@ -449,13 +541,10 @@ class Entlet(object):
         Args:
             values:
                 The list of data structures to be filtered
-
             filter_field:
-                The name of the field on the data structure whose value is being evaluated
-
+                The name of the field on the data structure whos value is being evaluated
             filter_value:
                 The value that will be compared against the value provided by filter_field
-
             filter_comparator:
                 The function that will evaluate filter_value against the value provided by
                 filter_field. Must return a boolean.
@@ -517,8 +606,8 @@ class Entlet(object):
 
     def clear(self) -> Entlet:
         """Removes all values stored on the entlet. Really should only be used in testing."""
-        self.values.clear()
-        self.const_values.clear()
+        self._values.clear()
+        self._const_values.clear()
         return self
 
     def _produce_fragment_product(self, obj: Dict[str, Any], field_names: List[str]):
@@ -551,10 +640,8 @@ class Entlet(object):
         "iso2", because those values don't exist together in the same nested object.
 
         Args:
-            obj:
-                A dictionary
-
-            field_names:
+            obj (dict): (values must be lists)
+            field_names (set):
                 the fields used in ER (formatted as "{field}.{subfield}"). Unused subfields will
                 be removed.
 
@@ -578,9 +665,7 @@ class Entlet(object):
 
         multiplied = [
             dict(zip(obj_non_empty.keys(), item))
-            for item in list(
-                itertools.product(*[values for key, values in obj_non_empty.items()])
-            )
+            for item in list(itertools.product(*[values for key, values in obj_non_empty.items()]))
         ]
 
         # break nested fields back out
@@ -626,12 +711,12 @@ class Entlet(object):
         """
 
         # Entlet is empty
-        if not self.values:
+        if not self._values:
             return
 
         # Grab all root keys that will be used in the fragment
         base_fields = list(set([field.split('.')[0] for field in fragment_fields]))
-        frag_root_fields = {key: self.values[key] for key in base_fields}
+        frag_root_fields = {key: self._values[key] for key in base_fields}
 
         for fragment in self._produce_fragment_product(frag_root_fields, fragment_fields):
             # The entlet_id *must* be appended to every fragment
@@ -640,7 +725,9 @@ class Entlet(object):
 
     def is_subset(self, other_entlet):
         """ Useful for unit tests, check if an entlet contains all the values of another """
-        for group_name, attr_groups in self.values.items():
+        for group_name, attr_groups in self._values.items():
+            # If a group type is missing, then not a subset. Currently requiring groups to line
+            # up even though they have no bearing on the final frags/entlet
             if group_name not in other_entlet.values:
                 return False
 
@@ -655,7 +742,7 @@ class Entlet(object):
                     return False
 
         # Now check const values
-        for field, value in self.const_values.items():
+        for field, value in self._const_values.items():
             if field not in other_entlet.const_values:
                 return False
 
