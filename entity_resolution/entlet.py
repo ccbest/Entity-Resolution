@@ -56,11 +56,8 @@ class Entlet(object):
 
     def __repr__(self) -> str:
         """REPL representation"""
-        if self._uid:
-            return f'<Entlet(uid={self._uid})>'
-
-        attrs = ', '.join('{}={}'.format(k, v) for k, v in self._const_values.items())
-        return f'<Entlet({attrs})>'
+        return f'<Entlet(ent_type={self.ent_type}, ' \
+               f'data_source={self.data_source}, uid={self._uid})>'
 
     def __contains__(self, o) -> bool:
         """Boolean check if key exist"""

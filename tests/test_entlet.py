@@ -19,14 +19,14 @@ def test_add():
         mock_entlet.add({"entlet_id": "abc"})
 
     mock_entlet.add({"data_source": "test"})
-    assert mock_entlet._values["data_source"] == "test"
+    assert mock_entlet.data_source == "test"
 
 
 def test_repr():
     mock_entlet = Entlet()
 
     mock_entlet.add({"data_source": "test"})
-    assert str(mock_entlet) == "Entlet(data_source=test)"
+    assert repr(mock_entlet) == "<Entlet(ent_type=None, data_source=test, uid=None)>"
 
 
 def test_contains():

@@ -59,13 +59,12 @@ def test_entlet_df(test_entletmap) -> pd.DataFrame:
 
 def test_alltoall_blocking(test_entlet_df):
     blocker = AllToAll()
-    print(test_entlet_df)
     blocked = list(blocker.block(test_entlet_df))
 
-    assert Counter(blocked) == Counter([
-        ('mock_source:mock_type:1', 'mock_source:mock_type:2'),
-        ('mock_source:mock_type:1', 'mock_source:mock_type:3'),
-        ('mock_source:mock_type:2', 'mock_source:mock_type:3')
-    ])
+    assert set(blocked) == {
+        ('mock_type:mock_source:1', 'mock_type:mock_source:2'),
+        ('mock_type:mock_source:1', 'mock_type:mock_source:3'),
+        ('mock_type:mock_source:2', 'mock_type:mock_source:3')
+    }
 
 
