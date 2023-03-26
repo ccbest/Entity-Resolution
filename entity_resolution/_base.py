@@ -1,6 +1,6 @@
 import abc
 from collections import defaultdict
-from typing import Any, Dict, Generator, Hashable, List, Optional, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 import pandas as pd
 
@@ -80,36 +80,6 @@ class ScoringReducer(abc.ABC):
         pass
 
 
-class StandardizationTransform(abc.ABC):
-
-    @abc.abstractmethod
-    def run(self, entlet):
-        """
-        Applies standardization logic against a given entlet.
-
-        Args:
-            entlet (Entlet): an instance of an Entlet. See utils.entlet for more information.
-
-        Returns:
-
-        """
-        pass
-
-    @abc.abstractmethod
-    def standardize(self, value: Any) -> Any:
-        """
-        The method for actually applying standardization logic against a given value.
-        Should return the standardized value.
-
-        Args:
-            value (Any): The value to be standardized.
-
-        Returns:
-            (Any) The standardized value
-        """
-        pass
-
-
 class SimilarityMetric(abc.ABC):
     """Compares two values"""
 
@@ -127,8 +97,9 @@ class SimilarityMetric(abc.ABC):
 
     def transform(self, entlet_df: pd.DataFrame) -> None:
         """
-        Run all specified transforms in sequence. The transforms will append columns to the dataframe,
-        so be sure to obtain the final field name using the .get_transformed_field_name property.
+        Run all specified transforms in sequence. The transforms will append columns to the
+        dataframe, so be sure to obtain the final field name using the .get_transformed_field_name
+        property.
 
         Args:
             entlet_df (DataFrame): A dataframe of entlets

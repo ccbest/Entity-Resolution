@@ -35,7 +35,11 @@ class Strategy:
     def transforms(self):
         return [metric.transform for metric in self.metrics]
 
-    def resolve(self, entletmap: EntletMap, entlet_df: pd.DataFrame) -> Generator[Tuple[str, str], None, None]:
+    def resolve(
+            self,
+            entletmap: EntletMap,
+            entlet_df: pd.DataFrame
+    ) -> Generator[Tuple[str, str], None, None]:
         """
 
         Args:
@@ -49,6 +53,9 @@ class Strategy:
             metric.transform(entlet_df)
 
         for candidate_pair in self.blocker.block(entlet_df):
-            scores = [metric.score(*[entletmap.get(x) for x in candidate_pair]) for metric in self.metrics]
+            scores = [
+                metric.score(*[entletmap.get(x) for x in candidate_pair])
+                for metric in self.metrics
+            ]
             if self.scoring_method(*scores):
                 yield candidate_pair
