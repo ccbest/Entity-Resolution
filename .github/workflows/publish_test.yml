@@ -1,4 +1,4 @@
-name: Push to master
+name: Publish to Test PYPI
 
 on:
   push:
