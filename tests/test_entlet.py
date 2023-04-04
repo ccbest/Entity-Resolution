@@ -18,8 +18,18 @@ def test_add():
     with pytest.raises(KeyError):
         mock_entlet.add({"entlet_id": "abc"})
 
+    with pytest.raises(KeyError):
+        mock_entlet.add({"": "abc"})
+
     mock_entlet.add({"data_source": "test"})
     assert mock_entlet.data_source == "test"
+
+    # Ensure keys can't have different data types
+    with pytest.raises(ValueError):
+        mock_entlet.add({"test_dict": 0})
+
+    with pytest.raises(ValueError):
+        mock_entlet.add({"test_dict": ["test", 1]})
 
 
 def test_repr():
