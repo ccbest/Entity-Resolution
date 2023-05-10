@@ -488,7 +488,8 @@ class Entlet:
                 for val in value:
                     self._check_and_set_type(key, type(val))
 
-                self._values[key] += value
+                    if val not in self._values[key]:
+                        self._values[key].append(val)
 
             else:
                 self._check_and_set_type(key, type(value))
@@ -732,6 +733,7 @@ class Entlet:
         multiplies the values out using the ._product_fragment_product() method.
 
         Ensures all fragments retain the "entlet_id" field, which is critical for ER.
+
 
         Args:
             fragment_fields (List[str]): The list of fields that will be used in fragmenting
