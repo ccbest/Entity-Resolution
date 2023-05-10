@@ -8,11 +8,10 @@ import json
 from typing import Any, Callable, Dict, Generator, List, Optional, Set, Union
 
 
-# TODO: Values should have their type stored in the class for checking to avoid collisions
 # TODO: Deduplication of values could be moved to post-munge for efficiency
 
 
-class Entlet(object):
+class Entlet:
     """
     This class lets you build up information about an entlet and then output it into flattened
     fragments.
@@ -24,6 +23,8 @@ class Entlet(object):
     """
     CUSTOM_UID_FIELDS = dict()
     SOURCE_UID_FIELDS = dict()
+
+    _TYPE_MAP = dict()
 
     def __init__(self, initial: Optional[Dict[str, Any]] = None):
 
@@ -116,6 +117,42 @@ class Entlet(object):
 
         return self._uid
 
+    @classmethod
+    def _set_type(cls, key: str, value_type: type) -> None:
+
+        if key in cls._TYPE_MAP:
+            raise KeyError(f'Key {key} already exists in entlet typemap.')
+
+        cls._TYPE_MAP[key] = value_type
+
+    def _check_and_set_type(self, key: str, value_type: type):
+        """
+        Checks whether the provided key exists in the class type map. If it doesn't exist,
+        sets the key in the type map. If it does exist, ensures that the types match.
+
+        Args:
+            key:
+                The type map key
+
+            value_type:
+                The type of the value being added
+
+        Returns:
+            None
+
+        Raises:
+            ValueError
+                If the provided type does not match the expected type
+        """
+        if key not in self._TYPE_MAP:
+            self._set_type(key, value_type)
+            return
+
+        if not value_type == self._TYPE_MAP[key]:
+            raise ValueError(
+                f'Expected type {self._TYPE_MAP[key]} for key {key}, received {value_type}'
+            )
+
     def get(self, key: str, default: Any = None) -> Any:
         """
         Provides the same 'get' functionality as exists in a dictionary.
@@ -153,10 +190,19 @@ class Entlet(object):
         change.
 
         Args:
-            *args (str): The fields to use
+            data_source:
+                The name of the data source
+
+            *args:
+                The field names to use to generate the custom uid
 
         Returns:
-            (cls)
+            None
+
+        Raises:
+            ValueError:
+                If the data source already has a declared source UID field
+                If custom UID fields have already been declared
         """
         if data_source in cls.SOURCE_UID_FIELDS:
             raise ValueError(
@@ -403,38 +449,23 @@ class Entlet(object):
             entlet.add({a: 1, b: 2, c: {"c": 2, "d": 3}})
             entlet.add({a: 1, b: 3, c: {"c": 2, "d": 4}})
             entlet.add({c: {"c": 2, "d": 3}})
-
             # Result: {"a": [1], "b": [2, 3], "c": [{"c": 2, "d": 3}, {"c": 2, "d": 4}]}
 
 
             # Values in a field must be of the same datatype
             entlet = Entlet()
             entlet.add({a: [1, 2, "example"]})
-
             # Result: ValueError
 
 
             # The key entlet_id is reserved and cannot be added
             entlet = Entlet()
             entlet.add({entlet_id: "id123", ent_type: "entity"})
-
             # Result: KeyError
 
         """
-        def merge_values(a, b, _path):
-            if isinstance(b, list):
-                for item in b:
-                    merge_values(a, item, _path)
-                    return True
 
-            if isinstance(b, type(a[0])):
-                if b not in a:
-                    a.append(b)
-                return True
-
-            raise ValueError(f"Field {_path} expected type {type(a[0])}, received type {type(b)}")
-
-        for key in obj:
+        for key, value in obj.items():
             if not key:
                 raise KeyError("Cannot add entlet property which evaluates to None.")
 
@@ -442,27 +473,27 @@ class Entlet(object):
                 raise KeyError("You cannot use the .add() method to declare an entlet id.")
 
             if key == 'ent_type':
-                self.ent_type = obj[key]
+                self.ent_type = value
                 continue
 
             if key == 'data_source':
-                self.data_source = obj[key]
+                self.data_source = value
                 continue
 
             if key in self.required_fields:
-                self._set_const({key: obj[key]})
+                self._set_const({key: value})
                 continue
 
-            if key not in self._values or not self._values[key]:
-                if isinstance(obj[key], list):
-                    self._values[key] += obj[key]
+            if isinstance(value, list):
+                for val in value:
+                    self._check_and_set_type(key, type(val))
 
-                else:
-                    self._values[key].append(obj[key])
+                    if val not in self._values[key]:
+                        self._values[key].append(val)
 
-                continue
-
-            merge_values(self._values[key], obj[key], key)
+            else:
+                self._check_and_set_type(key, type(value))
+                self._values[key].append(value)
 
         return self
 
@@ -702,6 +733,7 @@ class Entlet(object):
         multiplies the values out using the ._product_fragment_product() method.
 
         Ensures all fragments retain the "entlet_id" field, which is critical for ER.
+
 
         Args:
             fragment_fields (List[str]): The list of fields that will be used in fragmenting
